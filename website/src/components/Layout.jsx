@@ -46,7 +46,8 @@ const Layout = () => {
           LIVE DEMO: SELF-HOSTED INFRASTRUCTURE
         </p>
         <p style={{ marginBottom: '0' }}>
-          You are currently viewing a production React website served directly from a repurposed <strong>Lenovo IdeaPad</strong> sitting in a home network.
+          You are currently viewing a production React website served directly from a repurposed{' '}
+          <strong>Lenovo IdeaPad</strong> sitting in a home network.
           <br />
           Powered by Arch Linux, Docker Containers, and Cloudflare Zero Trust Tunnels.
         </p>
