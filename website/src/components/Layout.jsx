@@ -1,12 +1,12 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet } from 'react-router-dom';
 
 const Layout = () => {
   return (
     <div className="layout-container">
       <nav className="navbar animate-fade-in">
-        <div className="logo">
+        <Link to="/" className="logo" style={{ textDecoration: 'none', color: 'inherit' }}>
           <span className="logo-icon">~/</span>arch-server
-        </div>
+        </Link>
         <div className="nav-links">
           <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             /home
@@ -29,6 +29,20 @@ const Layout = () => {
           >
             /system_architecture
           </NavLink>
+          <a
+            href="https://github.com/tanmayhutt/arch-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--accent-primary)',
+            }}
+          >
+            [source_code]
+          </a>
         </div>
       </nav>
 

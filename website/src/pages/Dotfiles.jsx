@@ -4,12 +4,30 @@ const Dotfiles = () => {
   return (
     <div className="animate-fade-in">
       <header style={{ marginBottom: '2rem' }}>
-        <span className="badge">module: hyprland-dotfiles</span>
-        <h1 style={{ marginTop: '1rem' }}>DESKTOP_ENVIRONMENT</h1>
-        <p>
-          High-performance Hyprland and Zsh configuration, tuned for Arch Linux. Built for speed,
-          aesthetics, and a powerful, keyboard-driven workflow.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span className="badge">module: hyprland-dotfiles</span>
+            <h1 style={{ marginTop: '1rem' }}>DESKTOP_ENVIRONMENT</h1>
+            <p>
+              High-performance Hyprland and Zsh configuration, tuned for Arch Linux. Built for
+              speed, aesthetics, and a powerful, keyboard-driven workflow.
+            </p>
+          </div>
+          <a
+            href="https://github.com/tanmayhutt/hyprland-dotfiles"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="badge"
+            style={{
+              textDecoration: 'none',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            [view_source_code]
+          </a>
+        </div>
       </header>
 
       <div className="terminal-image-container delay-100" style={{ marginBottom: '2.5rem' }}>
