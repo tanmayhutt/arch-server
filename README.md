@@ -4,7 +4,7 @@
 
 # arch-server
 
-**A repurposed Lenovo IdeaPad running headless Arch Linux as a personal home server and globally-accessible NAS.**
+**Headless Arch Linux Implementation for Network Attached Storage and Edge Computing on Repurposed Hardware**
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white)](https://archlinux.org/)
 [![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com/)
@@ -15,69 +15,70 @@
 
 ---
 
-## The Story
+## Architectural Overview
 
-This is a **spare Lenovo IdeaPad** that was previously used as a daily driver running Arch Linux with a full Hyprland desktop setup (those configs are preserved at [hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)).
+This repository documents the system architecture, configuration, and deployment strategy for a headless Arch Linux server. Deployed on a repurposed Lenovo IdeaPad, the system functions primarily as a highly secure, globally accessible Network Attached Storage (NAS) node and development sandbox.
 
-Rather than letting it collect dust, it was repurposed into a personal home server and NAS — while **keeping the entire Hyprland setup intact** for sentimental reasons and future use. The machine now runs headless (no monitor needed) and is controlled entirely over SSH through a private Tailscale network, accessible from anywhere in the world.
-
----
-
-## Hardware
-
-| Component | Details |
-|-----------|---------|
-| **Machine** | Lenovo IdeaPad 3 15IML05 |
-| **CPU** | Intel Core i3-10110U (4 cores @ 4.10 GHz) |
-| **RAM** | 8 GiB DDR4 |
-| **Storage** | 233 GiB SSD (ext4) |
-| **GPU** | Intel UHD Graphics (Integrated) |
-| **Network** | Wi-Fi via NetworkManager |
-| **OS** | Arch Linux x86_64 |
-| **Kernel** | Linux 7.1.3-arch1-2 |
+The underlying configuration preserves the original Hyprland graphical environment (documented in [hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)) for potential future utilization, while currently operating strictly via secure shell over a zero-trust mesh network.
 
 ---
 
-## Remote Access — SSH + Tailscale
+## Hardware Specifications
 
-The server is controlled entirely via **SSH over a private [Tailscale](https://tailscale.com/) mesh network**.
+| Subsystem | Specification |
+|-----------|---------------|
+| **Chassis/Model** | Lenovo IdeaPad 3 15IML05 |
+| **Processor** | Intel Core i3-10110U (4 threads @ 4.10 GHz) |
+| **Memory** | 8 GiB DDR4 |
+| **Storage Topology** | 233 GiB Solid State Drive (ext4 filesystem) |
+| **Graphics** | Intel UHD Graphics (Integrated) |
+| **Network Interface** | 802.11ac Wi-Fi via NetworkManager |
+| **Operating System** | Arch Linux x86_64 |
+| **Kernel Version** | Linux 7.1.3-arch1-2 |
 
-**Why Tailscale?**
-- Zero open firewall ports on the router
-- No public IP exposure whatsoever
-- End-to-end encrypted tunnel between devices
-- Works from anywhere — home, coffee shop, internationally
-- Only devices logged into the same Tailscale account can even see the server
+---
+
+## Network Topology & Remote Access
+
+The server infrastructure relies on a zero-trust network architecture, strictly limiting access through a private Tailscale mesh network.
+
+### SSH over Tailscale
+
+Administrative access is brokered exclusively via **SSH over Tailscale**. This design provides several critical security and operational advantages:
+- **Zero Ingress Ports**: Eliminates the requirement for local port forwarding on the perimeter firewall.
+- **NAT Traversal**: Ensures seamless connectivity regardless of the host's physical network location.
+- **End-to-End Encryption**: Secures all administrative traffic via WireGuard tunnels.
+- **Identity-Based Access**: Restricts visibility and access to authenticated nodes within the designated Tailscale tenant.
 
 ```bash
 ssh <username>@<your-tailscale-ip>
 ```
 
-> **Note:** The server is completely invisible to the public internet. No port forwarding. No exposed services. Tailscale only.
+> **Note:** The server operates with zero exposure to the public internet. Access is strictly confined to the Tailscale mesh.
 
 ---
 
-## NAS — Network Attached Storage
+## Storage Subsystem: Samba NAS
 
-The home directory is shared over the **private Tailscale network** using **Samba (SMB)** — the universal file sharing protocol natively supported by macOS, Windows, iOS, and Android — with no public exposure.
+The primary storage interface is implemented using the Server Message Block (SMB) protocol via Samba. This facilitates seamless cross-platform file operations across the mesh network.
 
-### Connect from any device
+### Client Integration
 
-| Device | Method |
-|--------|--------|
-| **Mac** | Finder → `Cmd+K` → `smb://<tailscale-ip>` |
-| **Windows** | File Explorer → `\\<tailscale-ip>` |
-| **iPhone/iPad** | Files app → `...` → Connect to Server → `smb://<tailscale-ip>` |
-| **Android** | File Manager → Network Storage → SMBv2/SMBv3 |
+| Client OS | Connection URI Protocol |
+|-----------|-------------------------|
+| **macOS** | `smb://<tailscale-ip>` |
+| **Windows** | `\\<tailscale-ip>` |
+| **iOS / iPadOS** | `smb://<tailscale-ip>` |
+| **Android** | SMBv2/SMBv3 via Client Application |
 
-> **Security:** Tailscale must be active on the connecting device. The SMB share is **not** exposed to the open internet — only accessible through the private Tailscale mesh.
+> **Security Definition:** The SMB daemon listens exclusively on the Tailscale virtual interface. It is inaccessible from the local physical network (WLAN) or the broader internet.
 
-### Samba Config (`/etc/samba/smb.conf`)
+### Daemon Configuration (`/etc/samba/smb.conf`)
 
 ```ini
 [global]
    workgroup = WORKGROUP
-   server string = Lenovo NAS
+   server string = Lenovo NAS Node
    security = user
    map to guest = bad user
    dns proxy = no
@@ -89,41 +90,25 @@ The home directory is shared over the **private Tailscale network** using **Samb
    valid users = <username>
 ```
 
-## WiFi Management — `wlctl`
+---
 
-WiFi is managed with **[wlctl](https://github.com/sandorex/wlctl)** — a beautiful terminal-based WiFi TUI that works natively with NetworkManager.
+## Network Management (`wlctl`)
+
+Wireless network provisioning is managed via **wlctl**, an ncurses-based terminal user interface built for NetworkManager. 
+
+Unlike alternative interfaces (e.g., `impala`, which depends on `iwd`), `wlctl` natively integrates with the existing NetworkManager stack, providing a robust administrative interface for SSID scanning, authentication, and diagnostic telemetry without requiring a graphical environment.
 
 ```bash
 wlctl
 ```
 
-This is a fork of the popular `impala` TUI, specifically designed for NetworkManager-based systems. It provides a full ncurses interface showing nearby networks, signal strength, security type, and device info.
-
-> **Note:** `impala` only works with `iwd`. Since this machine uses NetworkManager, `wlctl` is the correct equivalent.
-
-**Key bindings:**
-
-| Key | Action |
-|-----|--------|
-| `↑↓` / `k/j` | Navigate |
-| `Enter` / `~` | Connect/Disconnect |
-| `a` | Show all networks |
-| `d` | Remove saved network |
-| `s` | Scan for networks |
-| `S` | Show speed |
-| `u` | Show internet status |
-
 ---
 
-## Yazi — TUI File Manager
+## File System Navigation (`yazi`)
 
-**[Yazi](https://github.com/sxyazi/yazi)** is used for visually navigating the server's file system over SSH with a blazing-fast 3-column layout, file previews, and syntax highlighting.
+Terminal-based file operations are accelerated using **Yazi**, an asynchronous TUI file manager written in Rust. It provides advanced capabilities such as syntax highlighting, archive extraction, and media previews directly within the SSH session.
 
-```bash
-yazi
-```
-
-### Config (`~/.config/yazi/yazi.toml`)
+### Core Configuration (`~/.config/yazi/yazi.toml`)
 
 ```toml
 [preview]
@@ -139,45 +124,31 @@ prepend_previewers = [
 ]
 ```
 
-### Key bindings
+---
 
-| Key | Action |
-|-----|--------|
-| `h/j/k/l` | Navigate |
-| `Enter` | Open |
-| `q` | Quit |
-| `y/x/p` | Copy/Cut/Paste |
-| `d` | Delete |
-| `a` | Create file/folder |
-| `r` | Rename |
-| `/` | Search |
-| `.` | Toggle hidden files |
+## Device Integration & Telemetry (KDE Connect)
+
+**KDE Connect** operates as a background service to provide secure, encrypted telemetry and control integration between the server and peripheral mobile devices.
+
+Operational capabilities include:
+- **Clipboard Synchronization**: Bidirectional text transfer between mobile nodes and the server terminal.
+- **Payload Deployment**: Direct transfer of configuration files or shell scripts without traversing the SMB stack.
+- **Remote Execution**: Triggering predefined bash sequences via the mobile client.
+- **Input Emulation**: Utilizing the mobile device as an emergency remote keyboard interface.
 
 ---
 
-## KDE Connect — Device Integration
+## Automation & Utility Scripts (`~/scripts/`)
 
-**KDE Connect** is running to seamlessly integrate the server with mobile devices and other workstations (like macOS or Windows). 
+A suite of lightweight bash scripts is deployed for rapid system introspection over SSH.
 
-Even on a headless setup, it provides massive flexibility:
-- **Clipboard Sync**: Instantly copy text from a phone and paste it directly into the server terminal (or vice versa).
-- **File Dropping**: Push config files or small scripts directly from a phone to the server without needing SMB.
-- **Remote Input**: Use a phone as a remote keyboard if physical access is temporarily needed.
-- **Run Commands**: Trigger predefined bash scripts remotely from a phone with a single tap.
-
----
-
-## Custom Scripts (`~/scripts/`)
-
-Small utility scripts for quick system info over SSH:
-
-### `battery.sh`
+### `battery.sh` (Power Telemetry)
 ```bash
 #!/bin/bash
 cat /sys/class/power_supply/BAT*/capacity 2>/dev/null || echo "No battery"
 ```
 
-### `network-status.sh`
+### `network-status.sh` (WLAN State)
 ```bash
 #!/bin/bash
 ssid=$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d ':' -f2)
@@ -188,13 +159,13 @@ else
 fi
 ```
 
-### `whatsong.sh`
+### `whatsong.sh` (Media State)
 ```bash
 #!/bin/bash
 playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null || echo "No song playing"
 ```
 
-### `whoami.sh`
+### `whoami.sh` (Session Identity)
 ```bash
 #!/bin/bash
 echo "Logged in as: $(whoami)@$(hostname)"
@@ -202,39 +173,38 @@ echo "Logged in as: $(whoami)@$(hostname)"
 
 ---
 
-## Setting This Up From Scratch
+## System Provisioning & Deployment
 
-### 1. Enable SSH
+The following sequences detail the required commands to bootstrap the server environment from a minimal Arch Linux installation.
+
+### 1. Secure Shell Daemon
 ```bash
 sudo systemctl enable --now sshd
 ```
 
-### 2. Install and connect Tailscale
+### 2. Tailscale Mesh Integration
 ```bash
 yay -S tailscale-bin
 sudo systemctl enable --now tailscaled
 sudo tailscale up
 ```
 
-### 3. Set up Samba NAS
+### 3. SMB Storage Deployment
 ```bash
 sudo pacman -S samba
 sudo smbpasswd -a <username>
 sudo systemctl enable --now smb nmb
 ```
 
-### 4. Install WiFi TUI
+### 4. Administrative TUI Tools
 ```bash
 yay -S wlctl-bin
-```
-
-### 5. Install Yazi file manager
-```bash
 sudo pacman -S yazi poppler ripgrep zoxide fd fzf imagemagick
 mkdir -p ~/.config/yazi
 ```
 
-### 6. Install earlyoom (prevent freezing under memory pressure)
+### 5. Out-of-Memory (OOM) Mitigation
+To guarantee system stability under heavy memory pressure, `earlyoom` is deployed to preemptively terminate offending processes before a kernel panic occurs.
 ```bash
 sudo pacman -S earlyoom
 sudo systemctl enable --now earlyoom
@@ -242,24 +212,14 @@ sudo systemctl enable --now earlyoom
 
 ---
 
-## Related
+## Related Repositories
 
-- **[hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)** — The Hyprland, Waybar, Wofi, Kitty, Cava, and Hyprlock configs running on this same machine.
-
----
-
-## Lessons Learned
-
-- **i3 CPUs cannot run local LLMs practically.** Tried `ollama` with `phi3:latest` (2.2GB model) — it responded but was far too slow without a GPU. A dedicated GPU is essential for local AI inference.
-- **Samba over Tailscale is incredibly powerful.** Mounting a Linux drive on a Mac through Finder feels exactly like plugging in a USB — except it works from anywhere in the world.
-- **Samsung "My Files" is unreliable for SMB.** Use **Cx File Explorer** on Android instead.
-- **AUR mirrors go stale.** Run `sudo pacman -Syy` to force-refresh the mirror database if you hit 404 errors during installs.
-- **earlyoom is essential on low-RAM servers.** Without it, running multiple services can cause the entire machine to freeze under memory pressure instead of gracefully killing hungry processes.
+- **[hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)** — The underlying Wayland compositor configurations, including Hyprland, Waybar, Wofi, Kitty, and Cava, which remain dormant but available on this architecture.
 
 ---
 
 <div align="center">
 
-*Built on a dusty Lenovo. Accessed from everywhere.*
+*Engineered on Repurposed Hardware. Secured via Mesh Networking.*
 
 </div>
