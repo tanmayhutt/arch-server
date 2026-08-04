@@ -6,18 +6,18 @@
                 `ooo/                    OS: Arch Linux x86_64
                `+oooo:                   Host: 81WB (IdeaPad 3 15IML05 U1a)
               `+oooooo:                  Kernel: Linux 7.1.3-arch1-2
-              -+oooooo+:                 Packages: 1258 (pacman)
-            `/:-:++oooo+:                Shell: zsh 5.9.1
-           `/++++/+++++++:               CPU: Intel Core i3-10110U (4) @ 4.10 GHz
-          `/++++++++++++++:              GPU: Intel UHD Graphics @ 1.00 GHz
-         `/+++ooooooooooooo/`            Memory: 1.44 GiB / 7.49 GiB
-        ./ooosssso++osssssso+`           Disk (/): 57.72 GiB / 233.18 GiB - ext4
-       .oossssso-````/ossssss+`          Battery: 100% [AC Connected]
-      -osssssso.      :ssssssso.
-     :osssssss/        osssso+++.
-    /ossssssss/        +ssssooo/-
-  `/ossssso+/:-        -:/+osssso+-
- `+sso+:-`                 `.-/+oso:
+              -+oooooo+:                 Uptime: 21 hours, 22 mins
+            `/:-:++oooo+:                Packages: 1 (flatpak-system), 5 (flatpak-user), 1258 (pacman)
+           `/++++/+++++++:               Shell: zsh 5.9.1
+          `/++++++++++++++:              Display (AUO61ED): 1920x1080 in 15", 60 Hz [Built-in]
+         `/+++ooooooooooooo/`            Terminal: /dev/pts/1 10.4p1
+        ./ooosssso++osssssso+`           CPU: Intel(R) Core(TM) i3-10110U (4) @ 4.10 GHz
+       .oossssso-````/ossssss+`          GPU: Intel UHD Graphics @ 1.00 GHz [Integrated]
+      -osssssso.      :ssssssso.         Memory: 1.45 GiB / 7.49 GiB (19%)
+     :osssssss/        osssso+++.        Swap: 0 B / 3.75 GiB (0%)
+    /ossssssss/        +ssssooo/-        Disk (/): 57.72 GiB / 233.18 GiB (25%) - ext4
+  `/ossssso+/:-        -:/+osssso+-      Battery (L19C3PF7): 100% [AC Connected]
+ `+sso+:-`                 `.-/+oso:     Locale: en_US.UTF-8
 `++:.                           `-/+/
 .`                                 `/
 ```
