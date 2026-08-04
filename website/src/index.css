@@ -26,7 +26,12 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: normal;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -34,11 +39,23 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
 }
 
-h1 { font-size: 2rem; border-bottom: 2px solid var(--accent-primary); display: inline-block; padding-bottom: 0.2rem; }
-h2 { font-size: 1.5rem; color: var(--accent-secondary); }
-h3 { font-size: 1.2rem; }
+h1 {
+  font-size: 2rem;
+  border-bottom: 2px solid var(--accent-primary);
+  display: inline-block;
+  padding-bottom: 0.2rem;
+}
+h2 {
+  font-size: 1.5rem;
+  color: var(--accent-secondary);
+}
+h3 {
+  font-size: 1.2rem;
+}
 
-p { margin-bottom: 1.5rem; }
+p {
+  margin-bottom: 1.5rem;
+}
 
 a {
   color: var(--accent-primary);
@@ -70,7 +87,7 @@ a:hover {
 }
 
 .server-panel::before {
-  content: "USER: root | STATUS: OK";
+  content: 'USER: root | STATUS: OK';
   position: absolute;
   top: -10px;
   left: 10px;
@@ -114,8 +131,14 @@ code {
   margin-bottom: 0.5rem;
 }
 
-.badge.arch { border-color: var(--accent-secondary); color: var(--accent-secondary); }
-.badge.tailscale { border-color: #fff; color: #fff; }
+.badge.arch {
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
+}
+.badge.tailscale {
+  border-color: #fff;
+  color: #fff;
+}
 
 /* Navbar */
 .navbar {
@@ -137,7 +160,7 @@ code {
 }
 
 .logo::before {
-  content: ">";
+  content: '>';
   animation: blink 1s step-end infinite;
 }
 
@@ -151,7 +174,8 @@ code {
   border-bottom: none;
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover,
+.nav-link.active {
   color: var(--accent-primary);
   background: none;
   border-bottom: 1px solid var(--accent-primary);
@@ -166,19 +190,36 @@ code {
 
 /* Animations */
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes typeIn {
-  from { opacity: 0; transform: translateX(-5px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .animate-fade-in {
   animation: typeIn 0.3s ease forwards;
 }
 
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
+.delay-100 {
+  animation-delay: 100ms;
+}
+.delay-200 {
+  animation-delay: 200ms;
+}
+.delay-300 {
+  animation-delay: 300ms;
+}

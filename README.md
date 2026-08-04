@@ -1,6 +1,6 @@
 <div align="center">
 
-![fastfetch](./fastfetch.png)
+![fastfetch](./assets/fastfetch.png)
 
 # arch-server
 
@@ -21,6 +21,26 @@
 This repository documents the system architecture, configuration, and CI/CD deployment strategy for a headless Arch Linux server deployed on a repurposed Lenovo IdeaPad. 
 
 The system functions as a highly secure, zero-trust edge server. It hosts a globally accessible production React website via **Cloudflare Tunnels**, automated via **GitHub Actions**, while securely operating as a local Network Attached Storage (NAS) node strictly within a **Tailscale** mesh network.
+
+---
+
+## 📂 Repository Structure
+
+```text
+arch-server/
+├── assets/                     # Static media and documentation assets
+│   └── fastfetch.png
+├── website/                    # React frontend application
+│   ├── src/                    # UI components and pages
+│   ├── public/                 # Static web assets (favicon, robots.txt)
+│   ├── Dockerfile              # Container build instructions for frontend
+│   └── package.json            # Node.js dependencies
+├── .github/workflows/          # CI/CD pipeline definitions
+│   └── deploy.yml              # Automated Zero-Trust deployment script
+├── docker-compose.yml          # Root orchestration for all homelab services
+├── README.md                   # System documentation
+└── .env                        # Environment variables (Ignored in Git)
+```
 
 ---
 

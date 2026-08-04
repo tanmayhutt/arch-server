@@ -1,6 +1,6 @@
 services:
   arch-server-web:
-    build: .
+    build: ./website
     container_name: arch-server-docs
     restart: unless-stopped
     security_opt:

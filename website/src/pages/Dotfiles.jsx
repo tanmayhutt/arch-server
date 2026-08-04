@@ -11,18 +11,37 @@ const Dotfiles = () => {
         <div className="server-panel">
           <h2>/wayland_stack</h2>
           <p>
-            Graphical stack built around <strong>Hyprland</strong>, a dynamic tiling Wayland compositor. Headless execution active. UI available upon physical access.
+            Graphical stack built around <strong>Hyprland</strong>, a dynamic tiling Wayland
+            compositor. Headless execution active. UI available upon physical access.
           </p>
         </div>
 
         <div className="server-panel delay-200">
           <h2>/core_components</h2>
-          <ul style={{ listStyle: 'none', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <li>- <strong>Waybar:</strong> Status bar</li>
-            <li>- <strong>Wofi:</strong> App launcher</li>
-            <li>- <strong>Kitty:</strong> GPU-accel terminal</li>
-            <li>- <strong>Cava:</strong> Audio visualizer</li>
-            <li>- <strong>Hyprlock:</strong> Screen lock</li>
+          <ul
+            style={{
+              listStyle: 'none',
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}
+          >
+            <li>
+              - <strong>Waybar:</strong> Status bar
+            </li>
+            <li>
+              - <strong>Wofi:</strong> App launcher
+            </li>
+            <li>
+              - <strong>Kitty:</strong> GPU-accel terminal
+            </li>
+            <li>
+              - <strong>Cava:</strong> Audio visualizer
+            </li>
+            <li>
+              - <strong>Hyprlock:</strong> Screen lock
+            </li>
           </ul>
         </div>
       </div>
@@ -30,15 +49,23 @@ const Dotfiles = () => {
       <div className="server-panel delay-300" style={{ marginTop: '1rem' }}>
         <h2>/deployment_automation</h2>
         <p>
-          [EXEC] Configuration deployment handled by automated bash orchestration via symlink injection to `.config`.
+          [EXEC] Configuration deployment handled by automated bash orchestration via symlink
+          injection to `.config`.
         </p>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem' }}>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '2rem',
+            marginTop: '1.5rem',
+          }}
+        >
           <div>
             <h3 style={{ marginBottom: '0.5rem' }}>deploy.sh</h3>
             <pre>
               <code>
-{`#!/bin/bash
+                {`#!/bin/bash
 echo "Deploying..."
 DIR="$HOME/dotfiles"
 
@@ -51,7 +78,7 @@ ln -sf "$DIR/.config/waybar" "$HOME/.config/waybar"`}
             <h3 style={{ marginBottom: '0.5rem' }}>push.sh</h3>
             <pre>
               <code>
-{`#!/bin/bash
+                {`#!/bin/bash
 git add .
 git commit -m "push.sh"
 git push origin main
