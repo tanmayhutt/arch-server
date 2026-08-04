@@ -2,11 +2,24 @@
 
 ```
                   -`                     tanmay@puturdawaywaltuh
-                 .o+`                    OS: Arch Linux x86_64
-                `ooo/                    Host: IdeaPad 3 15IML05
-               `+oooo:                   CPU: Intel Core i3-10110U (4) @ 4.10 GHz
-              `+oooooo:                  RAM: 8 GiB  |  Disk: 233 GiB
-              -+oooooo+:                 Services: SSH · Tailscale · Samba · ProtonVPN
+                 .o+`                    -----------------------
+                `ooo/                    OS: Arch Linux x86_64
+               `+oooo:                   Host: 81WB (IdeaPad 3 15IML05 U1a)
+              `+oooooo:                  Kernel: Linux 7.1.3-arch1-2
+              -+oooooo+:                 Packages: 1258 (pacman)
+            `/:-:++oooo+:                Shell: zsh 5.9.1
+           `/++++/+++++++:               CPU: Intel Core i3-10110U (4) @ 4.10 GHz
+          `/++++++++++++++:              GPU: Intel UHD Graphics @ 1.00 GHz
+         `/+++ooooooooooooo/`            Memory: 1.44 GiB / 7.49 GiB
+        ./ooosssso++osssssso+`           Disk (/): 57.72 GiB / 233.18 GiB - ext4
+       .oossssso-````/ossssss+`          Battery: 100% [AC Connected]
+      -osssssso.      :ssssssso.
+     :osssssss/        osssso+++.
+    /ossssssss/        +ssssooo/-
+  `/ossssso+/:-        -:/+osssso+-
+ `+sso+:-`                 `.-/+oso:
+`++:.                           `-/+/
+.`                                 `/
 ```
 
 # 🖥️ arch-server
@@ -39,35 +52,34 @@ Rather than letting it collect dust, it was repurposed into a personal home serv
 | **RAM** | 8 GiB DDR4 |
 | **Storage** | 233 GiB SSD (ext4) |
 | **GPU** | Intel UHD Graphics (Integrated) |
-| **Network** | Wi-Fi via NetworkManager (`wlan0`) |
+| **Network** | Wi-Fi via NetworkManager |
 | **OS** | Arch Linux x86_64 |
 | **Kernel** | Linux 7.1.3-arch1-2 |
 
 ---
 
-## 🌐 Remote Access
+## 🌐 Remote Access — SSH + Tailscale
 
-### SSH + Tailscale
+The server is controlled entirely via **SSH over a private [Tailscale](https://tailscale.com/) mesh network**.
 
-The server is controlled entirely via **SSH over a private [Tailscale](https://tailscale.com/) mesh network**. No open firewall ports. No public IP exposure. Works from anywhere in the world — home, coffee shop, or internationally.
+**Why Tailscale?**
+- Zero open firewall ports on the router
+- No public IP exposure whatsoever
+- End-to-end encrypted tunnel between devices
+- Works from anywhere — home, coffee shop, internationally
+- Only devices logged into the same Tailscale account can even see the server
 
 ```bash
-ssh tanmay@<your-tailscale-ip>
+ssh <username>@<your-tailscale-ip>
 ```
 
-Tailscale creates an encrypted, private network between all your devices (Mac, iPhone, Android). Any device logged into the same Tailscale account can reach the server using its dedicated private IP.
-
-**Services keeping remote access alive:**
-```
-sshd.service       → OpenSSH Daemon (remote shell access)
-tailscaled.service → Tailscale node agent (private mesh network)
-```
+> 🔒 The server is completely invisible to the public internet. No port forwarding. No exposed services. Tailscale only.
 
 ---
 
 ## 💾 NAS — Network Attached Storage
 
-The entire home directory (`/home/tanmay`) is shared over the local Tailscale network using **Samba (SMB)** — the universal file sharing protocol natively supported by macOS, Windows, iOS, and Android.
+The home directory is shared over the **private Tailscale network** using **Samba (SMB)** — the universal file sharing protocol natively supported by macOS, Windows, iOS, and Android — with no public exposure.
 
 ### Connect from any device
 
@@ -76,9 +88,9 @@ The entire home directory (`/home/tanmay`) is shared over the local Tailscale ne
 | **Mac** | Finder → `Cmd+K` → `smb://<tailscale-ip>` |
 | **Windows** | File Explorer → `\\<tailscale-ip>` |
 | **iPhone/iPad** | Files app → `...` → Connect to Server → `smb://<tailscale-ip>` |
-| **Android** | File Manager → Network Storage → SMBv2/SMBv3 → `<tailscale-ip>` |
+| **Android** | File Manager → Network Storage → SMBv2/SMBv3 |
 
-> ⚠️ **Tailscale must be active** on the connecting device. The SMB share is not exposed to the open internet.
+> 🔒 **Tailscale must be active** on the connecting device. The SMB share is **not** exposed to the open internet — only accessible through the private Tailscale mesh.
 
 ### Samba Config (`/etc/samba/smb.conf`)
 
@@ -90,57 +102,18 @@ The entire home directory (`/home/tanmay`) is shared over the local Tailscale ne
    map to guest = bad user
    dns proxy = no
 
-[Lenovo]
-   path = /home/tanmay
+[ShareName]
+   path = /home/<username>
    browsable = yes
    writable = yes
-   valid users = tanmay
+   valid users = <username>
 ```
-
-### Running services
-
-```
-smb.service  → Samba SMB Daemon (file sharing)
-nmb.service  → Samba NMB Daemon (network browsing/discovery)
-```
-
-### Set up Samba password
-
-```bash
-sudo smbpasswd -a tanmay
-```
-
----
-
-## ⚙️ Running Services
-
-These are all the background services actively running on the server:
-
-| Service | Description |
-|---------|-------------|
-| `sshd` | OpenSSH — remote shell access |
-| `tailscaled` | Tailscale — private mesh VPN network |
-| `smb` | Samba — SMB file sharing (NAS) |
-| `nmb` | Samba NMB — network browsing/discovery |
-| `NetworkManager` | WiFi and network management |
-| `wpa_supplicant` | WiFi authentication |
-| `proton.VPN` | ProtonVPN daemon |
-| `earlyoom` | Early OOM killer — prevents system freeze under memory pressure |
-| `irqbalance` | Balances CPU interrupts across cores for better performance |
-| `power-profiles-daemon` | Power profile management |
-| `bluetooth` | Bluetooth service |
-| `polkit` | Authorization manager |
-| `rtkit-daemon` | Realtime scheduling policy for audio |
-| `udisks2` | Disk manager |
-| `upower` | Power management |
-| `waydroid-container` | Waydroid Android container |
-| `systemd-timesyncd` | Network time synchronization |
 
 ---
 
 ## 📱 Waydroid — Android on Linux
 
-**Waydroid** is running as a container service, allowing Android apps to run natively inside the Linux environment using a full Android system image. This is purely experimental on this machine.
+**Waydroid** is running as a container service, allowing Android apps to run natively inside the Linux environment. Purely experimental on this machine.
 
 ```bash
 waydroid session start
@@ -224,7 +197,6 @@ Small utility scripts for quick system info over SSH:
 #!/bin/bash
 cat /sys/class/power_supply/BAT*/capacity 2>/dev/null || echo "No battery"
 ```
-Reads raw battery percentage directly from the kernel's power supply interface.
 
 ### `network-status.sh`
 ```bash
@@ -236,21 +208,18 @@ else
   echo "Disconnected"
 fi
 ```
-Shows the currently connected WiFi network name.
 
 ### `whatsong.sh`
 ```bash
 #!/bin/bash
 playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null || echo "No song playing"
 ```
-Shows the currently playing song via `playerctl` (works with Spotify, VLC, etc.)
 
 ### `whoami.sh`
 ```bash
 #!/bin/bash
 echo "Logged in as: $(whoami)@$(hostname)"
 ```
-Simple identity check.
 
 ---
 
@@ -271,23 +240,7 @@ sudo tailscale up
 ### 3. Set up Samba NAS
 ```bash
 sudo pacman -S samba
-
-sudo tee /etc/samba/smb.conf > /dev/null << 'EOF'
-[global]
-   workgroup = WORKGROUP
-   server string = Lenovo NAS
-   security = user
-   map to guest = bad user
-   dns proxy = no
-
-[Lenovo]
-   path = /home/tanmay
-   browsable = yes
-   writable = yes
-   valid users = tanmay
-EOF
-
-sudo smbpasswd -a tanmay
+sudo smbpasswd -a <username>
 sudo systemctl enable --now smb nmb
 ```
 
@@ -302,7 +255,7 @@ sudo pacman -S yazi poppler ripgrep zoxide fd fzf imagemagick
 mkdir -p ~/.config/yazi
 ```
 
-### 6. Install earlyoom (prevent freezing)
+### 6. Install earlyoom (prevent freezing under memory pressure)
 ```bash
 sudo pacman -S earlyoom
 sudo systemctl enable --now earlyoom
@@ -312,17 +265,17 @@ sudo systemctl enable --now earlyoom
 
 ## 🗂️ Related
 
-- **[hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)** — The Hyprland, Waybar, Wofi, Kitty, Cava, and Hyprlock configs running on this same machine. Includes `deploy.sh` for automated symlink deployment and `push.sh` for one-command git sync.
+- **[hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)** — The Hyprland, Waybar, Wofi, Kitty, Cava, and Hyprlock configs running on this same machine.
 
 ---
 
 ## 📝 Lessons Learned
 
-- **i3 CPUs cannot run local LLMs practically.** Tried `ollama` with `phi3:latest` — it worked but was far too slow without a GPU.
+- **i3 CPUs cannot run local LLMs practically.** Tried `ollama` with `phi3:latest` (2.2GB model) — it responded but was far too slow without a GPU. A dedicated GPU is essential for local AI inference.
 - **Samba over Tailscale is incredibly powerful.** Mounting a Linux drive on a Mac through Finder feels exactly like plugging in a USB — except it works from anywhere in the world.
-- **Samsung "My Files" is bad at SMB.** Use **Cx File Explorer** on Android instead.
-- **AUR mirrors go stale.** Run `sudo pacman -Syy` to force-refresh if you hit 404 errors.
-- **earlyoom is essential.** Without it, running multiple services on 8GB RAM can occasionally freeze the entire machine under pressure.
+- **Samsung "My Files" is unreliable for SMB.** Use **Cx File Explorer** on Android instead.
+- **AUR mirrors go stale.** Run `sudo pacman -Syy` to force-refresh the mirror database if you hit 404 errors during installs.
+- **earlyoom is essential on low-RAM servers.** Without it, running multiple services can cause the entire machine to freeze under memory pressure instead of gracefully killing hungry processes.
 
 ---
 
