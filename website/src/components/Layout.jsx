@@ -4,7 +4,9 @@ const Layout = () => {
   return (
     <div className="layout-container">
       <nav className="navbar animate-fade-in">
-        <div className="logo">arch-server_</div>
+        <div className="logo">
+          <span className="logo-icon">~/</span>arch-server
+        </div>
         <div className="nav-links">
           <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             /home
