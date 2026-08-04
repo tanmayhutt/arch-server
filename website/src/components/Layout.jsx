@@ -43,7 +43,7 @@ const Layout = () => {
         }}
       >
         <p style={{ marginBottom: '0.5rem', color: 'var(--text-primary)', fontWeight: 'bold' }}>
-          ⚡ LIVE DEMO: SELF-HOSTED INFRASTRUCTURE
+          LIVE DEMO: SELF-HOSTED INFRASTRUCTURE
         </p>
         <p style={{ marginBottom: '0' }}>
           You are currently viewing a production React website served directly from a repurposed <strong>Lenovo IdeaPad</strong> sitting in a home network.

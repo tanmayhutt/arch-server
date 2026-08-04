@@ -14,7 +14,7 @@
 
 </div>
 
-> ⚡ **[LIVE DEMO: arch-server.tanmaytiwari.me](https://arch-server.tanmaytiwari.me)**: The website for this repository is currently being served directly from the physical hardware documented below. It is completely self-hosted from a home network using Cloudflare Zero Trust Tunnels.
+> **[LIVE DEMO: arch-server.tanmaytiwari.me](https://arch-server.tanmaytiwari.me)**: The website for this repository is currently being served directly from the physical hardware documented below. It is completely self-hosted from a home network using Cloudflare Zero Trust Tunnels.
 
 ---
 
@@ -26,7 +26,7 @@ The system functions as a highly secure, zero-trust edge server. It hosts a glob
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```text
 arch-server/
@@ -46,7 +46,7 @@ arch-server/
 
 ---
 
-## 🌐 The Web Infrastructure (Zero-Trust)
+## The Web Infrastructure (Zero-Trust)
 
 The server hosts a high-performance React frontend (`/website`) served by Nginx. The infrastructure is designed with enterprise-grade security principles, completely isolating the physical home network from the public internet.
 
@@ -70,7 +70,7 @@ The application runs in isolated, optimized Docker containers:
 
 ---
 
-## 💻 Hardware Specifications
+## Hardware Specifications
 
 | Subsystem | Specification |
 |-----------|---------------|
@@ -84,7 +84,7 @@ The application runs in isolated, optimized Docker containers:
 
 ---
 
-## 🔒 Administrative Network & Remote Access
+## Administrative Network & Remote Access
 
 Administrative and file-level access is strictly isolated from the public internet. Access is brokered exclusively via **SSH over Tailscale**.
 
@@ -99,7 +99,7 @@ ssh <username>@<your-tailscale-ip>
 
 ---
 
-## 💾 Storage Subsystem: Samba NAS
+## Storage Subsystem: Samba NAS
 
 The primary storage interface is implemented using the Server Message Block (SMB) protocol via Samba. This facilitates seamless cross-platform file operations across the private mesh network.
 
@@ -114,7 +114,7 @@ The primary storage interface is implemented using the Server Message Block (SMB
 
 ---
 
-## 🛠️ Terminal Utilities
+## Terminal Utilities
 
 ### Network Management (`wlctl`)
 Wireless network provisioning is managed via **wlctl**, an ncurses-based terminal user interface built for NetworkManager. It provides a robust administrative interface for SSID scanning and diagnostics over SSH.
@@ -131,7 +131,7 @@ A suite of lightweight bash scripts is deployed for rapid system introspection o
 
 ---
 
-## 🚀 System Provisioning
+## System Provisioning
 
 The following sequences detail the required commands to bootstrap the core server environment from a minimal Arch Linux installation.
 
