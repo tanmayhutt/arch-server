@@ -1,6 +1,8 @@
 <div align="center">
 
 ```
+🧪 Jesse: yo yo yo! 1 to the 3 to the 6 to the 9, representing the ABQ — what up, biatch?!
+➜  ~ fastfetch
                   -`                     tanmay@puturdawaywaltuh
                  .o+`                    -----------------------
                 `ooo/                    OS: Arch Linux x86_64
@@ -16,10 +18,14 @@
       -osssssso.      :ssssssso.         Memory: 1.45 GiB / 7.49 GiB (19%)
      :osssssss/        osssso+++.        Swap: 0 B / 3.75 GiB (0%)
     /ossssssss/        +ssssooo/-        Disk (/): 57.72 GiB / 233.18 GiB (25%) - ext4
-  `/ossssso+/:-        -:/+osssso+-      Battery (L19C3PF7): 100% [AC Connected]
- `+sso+:-`                 `.-/+oso:     Locale: en_US.UTF-8
-`++:.                           `-/+/
+  `/ossssso+/:-        -:/+osssso+-      Local IP (wlan0): 192.168.1.48/24
+ `+sso+:-`                 `.-/+oso:     Battery (L19C3PF7): 100% [AC Connected]
+`++:.                           `-/+/    Locale: en_US.UTF-8
 .`                                 `/
+
+
+🧪 Jesse: yo yo yo! 1 to the 3 to the 6 to the 9, representing the ABQ — what up, biatch?!
+➜  ~
 ```
 
 # 🖥️ arch-server
