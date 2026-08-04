@@ -12,6 +12,8 @@
 [![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com/)
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
 
+> ⚡ **LIVE DEMO**: The website for this repository is currently being served directly from the physical hardware documented below. It is completely self-hosted from a home network using Cloudflare Zero Trust Tunnels.
+
 </div>
 
 ---

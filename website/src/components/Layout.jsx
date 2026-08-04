@@ -33,14 +33,23 @@ const Layout = () => {
       <footer
         style={{
           marginTop: '5rem',
-          padding: '2rem 0',
+          padding: '2rem 1rem',
           textAlign: 'center',
-          borderTop: '1px dashed var(--border-color)',
+          borderTop: '1px solid var(--border-color)',
           color: 'var(--text-secondary)',
-          fontSize: '0.8rem',
+          fontSize: '0.85rem',
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: 'var(--border-radius)',
         }}
       >
-        <p>EOF. Engineered on Repurposed Hardware. Secured via Mesh Networking.</p>
+        <p style={{ marginBottom: '0.5rem', color: 'var(--text-primary)', fontWeight: 'bold' }}>
+          ⚡ LIVE DEMO: SELF-HOSTED INFRASTRUCTURE
+        </p>
+        <p style={{ marginBottom: '0' }}>
+          You are currently viewing a production React website served directly from a repurposed <strong>Lenovo IdeaPad</strong> sitting in a home network.
+          <br />
+          Powered by Arch Linux, Docker Containers, and Cloudflare Zero Trust Tunnels.
+        </p>
       </footer>
     </div>
   );
