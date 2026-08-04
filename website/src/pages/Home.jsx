@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import fastfetchImg from '../../../assets/fastfetch.png';
 
 const Home = () => {
   return (
@@ -9,7 +10,7 @@ const Home = () => {
       </header>
 
       <div className="terminal-image-container delay-100" style={{ marginBottom: '2.5rem' }}>
-        <img src="/fastfetch.png" alt="Arch Linux Fastfetch Output" />
+        <img src={fastfetchImg} alt="Arch Linux Fastfetch Output" />
       </div>
 
       <div className="grid-2">
