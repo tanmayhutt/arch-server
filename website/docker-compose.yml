@@ -1,10 +1,15 @@
-version: '3.8'
-
 services:
   arch-server-web:
     build: .
     container_name: arch-server-docs
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -13,3 +18,5 @@ services:
     command: tunnel run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    security_opt:
+      - no-new-privileges:true
