@@ -25,7 +25,7 @@ const Mermaid = ({ chart }) => {
       setSvgContent(svg);
     }).catch(error => {
       console.error("Mermaid parsing error:", error);
-      setSvgContent(`<div style="color: red; padding: 20px;"><pre>\${error.message || error}</pre></div>`);
+      setSvgContent(`<div style="color: red; padding: 20px;"><pre>${error.message || error}</pre></div>`);
     });
   }, [chart]);
 
