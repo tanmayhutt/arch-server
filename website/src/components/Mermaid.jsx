@@ -14,19 +14,24 @@ const Mermaid = ({ chart }) => {
 
   useEffect(() => {
     // Generate a unique ID for this diagram
-    const id = `mermaid-svg-\${Math.round(Math.random() * 10000)}`;
+    const id = `mermaid-svg-${Math.round(Math.random() * 10000)}`;
 
     // Render the mermaid chart directly to an SVG string
-    mermaid.render(id, chart).then((result) => {
-      // Inject CSS into the SVG string to force it to render at its native, lossless size
-      // rather than shrinking to fit the container width (which makes it look blurry).
-      let svg = result.svg;
-      svg = svg.replace('<svg ', '<svg style="max-width: none !important; height: auto;" ');
-      setSvgContent(svg);
-    }).catch(error => {
-      console.error("Mermaid parsing error:", error);
-      setSvgContent(`<div style="color: red; padding: 20px;"><pre>${error.message || error}</pre></div>`);
-    });
+    mermaid
+      .render(id, chart)
+      .then((result) => {
+        // Inject CSS into the SVG string to force it to render at its native, lossless size
+        // rather than shrinking to fit the container width (which makes it look blurry).
+        let svg = result.svg;
+        svg = svg.replace('<svg ', '<svg style="max-width: none !important; height: auto;" ');
+        setSvgContent(svg);
+      })
+      .catch((error) => {
+        console.error('Mermaid parsing error:', error);
+        setSvgContent(
+          `<div style="color: red; padding: 20px;"><pre>${error.message || error}</pre></div>`,
+        );
+      });
   }, [chart]);
 
   return (

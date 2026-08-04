@@ -1,11 +1,29 @@
 const ArchServer = () => {
   return (
     <div className="animate-fade-in">
-      <div style={{ marginBottom: '2rem' }}>
-        <span className="badge arch">module: arch-server</span>
-        <h1 style={{ marginTop: '1rem' }}>SERVER_ARCHITECTURE</h1>
-        <p>[INFO] Subsystem breakdown: networking, storage, telemetry.</p>
-      </div>
+      <header style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span className="badge arch">module: arch-server</span>
+            <h1 style={{ marginTop: '1rem' }}>SERVER_ARCHITECTURE</h1>
+            <p>[INFO] Subsystem breakdown: networking, storage, telemetry.</p>
+          </div>
+          <a
+            href="https://github.com/tanmayhutt/arch-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="badge"
+            style={{
+              textDecoration: 'none',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            [view_source_code]
+          </a>
+        </div>
+      </header>
 
       <div className="server-panel delay-100">
         <h2>/net_topology</h2>

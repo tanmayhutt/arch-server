@@ -29,20 +29,6 @@ const Layout = () => {
           >
             /system_architecture
           </NavLink>
-          <a
-            href="https://github.com/tanmayhutt/arch-server"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              color: 'var(--accent-primary)',
-            }}
-          >
-            [source_code]
-          </a>
         </div>
       </nav>
 
