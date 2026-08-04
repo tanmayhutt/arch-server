@@ -4,12 +4,13 @@
 
 # arch-server
 
-**Headless Arch Linux Implementation for Network Attached Storage and Edge Computing on Repurposed Hardware**
+**Headless Arch Linux Implementation for Network Attached Storage, Edge Computing, and Zero-Trust Web Hosting on Repurposed Hardware**
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white)](https://archlinux.org/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=Cloudflare&logoColor=white)](https://www.cloudflare.com/)
 [![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com/)
-[![Samba](https://img.shields.io/badge/Samba_NAS-FF6600?style=for-the-badge&logo=linux&logoColor=white)](https://www.samba.org/)
-[![SSH](https://img.shields.io/badge/SSH-4D4D4D?style=for-the-badge&logo=openssh&logoColor=white)](https://www.openssh.com/)
+[![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
 
 </div>
 
@@ -17,13 +18,37 @@
 
 ## Architectural Overview
 
-This repository documents the system architecture, configuration, and deployment strategy for a headless Arch Linux server. Deployed on a repurposed Lenovo IdeaPad, the system functions primarily as a highly secure, globally accessible Network Attached Storage (NAS) node and development sandbox.
+This repository documents the system architecture, configuration, and CI/CD deployment strategy for a headless Arch Linux server deployed on a repurposed Lenovo IdeaPad. 
 
-The underlying configuration preserves the original Hyprland graphical environment (documented in [hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)) for potential future utilization, while currently operating strictly via secure shell over a zero-trust mesh network.
+The system functions as a highly secure, zero-trust edge server. It hosts a globally accessible production React website via **Cloudflare Tunnels**, automated via **GitHub Actions**, while securely operating as a local Network Attached Storage (NAS) node strictly within a **Tailscale** mesh network.
 
 ---
 
-## Hardware Specifications
+## 🌐 The Web Infrastructure (Zero-Trust)
+
+The server hosts a high-performance React frontend (`/website`) served by Nginx. The infrastructure is designed with enterprise-grade security principles, completely isolating the physical home network from the public internet.
+
+### 1. Zero-Trust Routing (Cloudflare Tunnels)
+Instead of relying on dangerous local port forwarding or exposing the home IP address, public web traffic is routed through **Cloudflare Zero Trust Tunnels**.
+- **No Open Ports:** The physical router has exactly zero open ports.
+- **Outbound Only:** The `cloudflared` Docker container establishes a secure, outbound-only connection to Cloudflare's edge servers.
+- **Automatic SSL:** Cloudflare automatically provisions and enforces strict SSL/HTTPS at the edge without requiring local `certbot` management.
+
+### 2. CI/CD Deployment Pipeline (GitHub Actions)
+Deployments are 100% automated via GitHub Actions, establishing a secure tunnel into the local network without exposing SSH to the internet.
+- On every push to `main`, a GitHub Action runner boots up.
+- The runner connects to the Lenovo server securely via **SSH over Tailscale**.
+- It pulls the latest code, injects the Cloudflare Tunnel Token, and completely rebuilds the Docker containers (`docker compose up -d --build`).
+
+### 3. Hardened Docker Containers
+The application runs in isolated, optimized Docker containers:
+- **Node.js 22 & Nginx Alpine:** Multi-stage builds are used to compile the React/Vite application into static files, served by a lightweight Nginx container.
+- **Resource Limits:** Hard caps on RAM (512MB) and CPU cores prevent memory leaks from freezing the host server.
+- **Privilege Stripping:** Containers run with `no-new-privileges: true` to prevent any potential kernel privilege escalation.
+
+---
+
+## 💻 Hardware Specifications
 
 | Subsystem | Specification |
 |-----------|---------------|
@@ -34,156 +59,70 @@ The underlying configuration preserves the original Hyprland graphical environme
 | **Graphics** | Intel UHD Graphics (Integrated) |
 | **Network Interface** | 802.11ac Wi-Fi via NetworkManager |
 | **Operating System** | Arch Linux x86_64 |
-| **Kernel Version** | Linux 7.1.3-arch1-2 |
 
 ---
 
-## Network Topology & Remote Access
+## 🔒 Administrative Network & Remote Access
 
-The server infrastructure relies on a zero-trust network architecture, strictly limiting access through a private Tailscale mesh network.
+Administrative and file-level access is strictly isolated from the public internet. Access is brokered exclusively via **SSH over Tailscale**.
 
 ### SSH over Tailscale
-
-Administrative access is brokered exclusively via **SSH over Tailscale**. This design provides several critical security and operational advantages:
-- **Zero Ingress Ports**: Eliminates the requirement for local port forwarding on the perimeter firewall.
-- **NAT Traversal**: Ensures seamless connectivity regardless of the host's physical network location.
-- **End-to-End Encryption**: Secures all administrative traffic via WireGuard tunnels.
-- **Identity-Based Access**: Restricts visibility and access to authenticated nodes within the designated Tailscale tenant.
+- **NAT Traversal:** Ensures seamless connectivity regardless of the host's physical network location.
+- **End-to-End Encryption:** Secures all administrative traffic via WireGuard tunnels.
+- **Identity-Based Access:** Restricts visibility and access to authenticated nodes within the designated Tailscale tenant.
 
 ```bash
 ssh <username>@<your-tailscale-ip>
 ```
 
-> **Note:** The server operates with zero exposure to the public internet. Access is strictly confined to the Tailscale mesh.
-
 ---
 
-## Storage Subsystem: Samba NAS
+## 💾 Storage Subsystem: Samba NAS
 
-The primary storage interface is implemented using the Server Message Block (SMB) protocol via Samba. This facilitates seamless cross-platform file operations across the mesh network.
+The primary storage interface is implemented using the Server Message Block (SMB) protocol via Samba. This facilitates seamless cross-platform file operations across the private mesh network.
 
 ### Client Integration
-
 | Client OS | Connection URI Protocol |
 |-----------|-------------------------|
 | **macOS** | `smb://<tailscale-ip>` |
 | **Windows** | `\\<tailscale-ip>` |
 | **iOS / iPadOS** | `smb://<tailscale-ip>` |
-| **Android** | SMBv2/SMBv3 via Client Application |
 
-> **Security Definition:** The SMB daemon listens exclusively on the Tailscale virtual interface. It is inaccessible from the local physical network (WLAN) or the broader internet.
-
-### Daemon Configuration (`/etc/samba/smb.conf`)
-
-```ini
-[global]
-   workgroup = WORKGROUP
-   server string = Lenovo NAS Node
-   security = user
-   map to guest = bad user
-   dns proxy = no
-
-[ShareName]
-   path = /home/<username>
-   browsable = yes
-   writable = yes
-   valid users = <username>
-```
+> **Security Definition:** The SMB daemon listens exclusively on the Tailscale virtual interface. It is completely inaccessible from the public internet.
 
 ---
 
-## Network Management (`wlctl`)
+## 🛠️ Terminal Utilities
 
-Wireless network provisioning is managed via **wlctl**, an ncurses-based terminal user interface built for NetworkManager. 
+### Network Management (`wlctl`)
+Wireless network provisioning is managed via **wlctl**, an ncurses-based terminal user interface built for NetworkManager. It provides a robust administrative interface for SSID scanning and diagnostics over SSH.
 
-Unlike alternative interfaces (e.g., `impala`, which depends on `iwd`), `wlctl` natively integrates with the existing NetworkManager stack, providing a robust administrative interface for SSID scanning, authentication, and diagnostic telemetry without requiring a graphical environment.
+### File System Navigation (`yazi`)
+Terminal-based file operations are accelerated using **Yazi**, an asynchronous TUI file manager written in Rust, providing image previews and archive extraction directly within the SSH session.
 
-```bash
-wlctl
-```
-
----
-
-## File System Navigation (`yazi`)
-
-Terminal-based file operations are accelerated using **Yazi**, an asynchronous TUI file manager written in Rust. It provides advanced capabilities such as syntax highlighting, archive extraction, and media previews directly within the SSH session.
-
-### Core Configuration (`~/.config/yazi/yazi.toml`)
-
-```toml
-[preview]
-image_quality = 50
-max_width = 300
-max_height = 300
-
-[plugin]
-prepend_previewers = [
-  { mime = "image/png",  run = "image" },
-  { mime = "image/jpeg", run = "image" },
-  { mime = "image/webp", run = "image" },
-]
-```
+### Automation Scripts (`~/scripts/`)
+A suite of lightweight bash scripts is deployed for rapid system introspection over SSH:
+- `battery.sh` - Power Telemetry
+- `network-status.sh` - WLAN State
+- `whatsong.sh` - Media State
+- `whoami.sh` - Session Identity
 
 ---
 
-## Device Integration & Telemetry (KDE Connect)
+## 🚀 System Provisioning
 
-**KDE Connect** operates as a background service to provide secure, encrypted telemetry and control integration between the server and peripheral mobile devices.
+The following sequences detail the required commands to bootstrap the core server environment from a minimal Arch Linux installation.
 
-Operational capabilities include:
-- **Clipboard Synchronization**: Bidirectional text transfer between mobile nodes and the server terminal.
-- **Payload Deployment**: Direct transfer of configuration files or shell scripts without traversing the SMB stack.
-- **Remote Execution**: Triggering predefined bash sequences via the mobile client.
-- **Input Emulation**: Utilizing the mobile device as an emergency remote keyboard interface.
-
----
-
-## Automation & Utility Scripts (`~/scripts/`)
-
-A suite of lightweight bash scripts is deployed for rapid system introspection over SSH.
-
-### `battery.sh` (Power Telemetry)
+### 1. Docker & Docker Compose
 ```bash
-#!/bin/bash
-cat /sys/class/power_supply/BAT*/capacity 2>/dev/null || echo "No battery"
+sudo pacman -Sy docker docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker <username>
 ```
 
-### `network-status.sh` (WLAN State)
-```bash
-#!/bin/bash
-ssid=$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d ':' -f2)
-if [[ -n "$ssid" ]]; then
-  echo "WiFi: $ssid"
-else
-  echo "Disconnected"
-fi
-```
-
-### `whatsong.sh` (Media State)
-```bash
-#!/bin/bash
-playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null || echo "No song playing"
-```
-
-### `whoami.sh` (Session Identity)
-```bash
-#!/bin/bash
-echo "Logged in as: $(whoami)@$(hostname)"
-```
-
----
-
-## System Provisioning & Deployment
-
-The following sequences detail the required commands to bootstrap the server environment from a minimal Arch Linux installation.
-
-### 1. Secure Shell Daemon
+### 2. Secure Shell & Tailscale
 ```bash
 sudo systemctl enable --now sshd
-```
-
-### 2. Tailscale Mesh Integration
-```bash
 yay -S tailscale-bin
 sudo systemctl enable --now tailscaled
 sudo tailscale up
@@ -196,30 +135,10 @@ sudo smbpasswd -a <username>
 sudo systemctl enable --now smb nmb
 ```
 
-### 4. Administrative TUI Tools
-```bash
-yay -S wlctl-bin
-sudo pacman -S yazi poppler ripgrep zoxide fd fzf imagemagick
-mkdir -p ~/.config/yazi
-```
-
-### 5. Out-of-Memory (OOM) Mitigation
-To guarantee system stability under heavy memory pressure, `earlyoom` is deployed to preemptively terminate offending processes before a kernel panic occurs.
-```bash
-sudo pacman -S earlyoom
-sudo systemctl enable --now earlyoom
-```
-
----
-
-## Related Repositories
-
-- **[hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)** — The underlying Wayland compositor configurations, including Hyprland, Waybar, Wofi, Kitty, and Cava, which remain dormant but available on this architecture.
-
 ---
 
 <div align="center">
 
-*Engineered on Repurposed Hardware. Secured via Mesh Networking.*
+*Engineered on Repurposed Hardware. Secured via Mesh Networking. Deployed via Edge Compute.*
 
 </div>
