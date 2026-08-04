@@ -53,7 +53,7 @@ The server is controlled entirely via **SSH over a private [Tailscale](https://t
 ssh <username>@<your-tailscale-ip>
 ```
 
-> 🔒 The server is completely invisible to the public internet. No port forwarding. No exposed services. Tailscale only.
+> **Note:** The server is completely invisible to the public internet. No port forwarding. No exposed services. Tailscale only.
 
 ---
 
@@ -70,7 +70,7 @@ The home directory is shared over the **private Tailscale network** using **Samb
 | **iPhone/iPad** | Files app → `...` → Connect to Server → `smb://<tailscale-ip>` |
 | **Android** | File Manager → Network Storage → SMBv2/SMBv3 |
 
-> 🔒 **Tailscale must be active** on the connecting device. The SMB share is **not** exposed to the open internet — only accessible through the private Tailscale mesh.
+> **Security:** Tailscale must be active on the connecting device. The SMB share is **not** exposed to the open internet — only accessible through the private Tailscale mesh.
 
 ### Samba Config (`/etc/samba/smb.conf`)
 
@@ -152,6 +152,18 @@ prepend_previewers = [
 | `r` | Rename |
 | `/` | Search |
 | `.` | Toggle hidden files |
+
+---
+
+## KDE Connect — Device Integration
+
+**KDE Connect** is running to seamlessly integrate the server with mobile devices and other workstations (like macOS or Windows). 
+
+Even on a headless setup, it provides massive flexibility:
+- **Clipboard Sync**: Instantly copy text from a phone and paste it directly into the server terminal (or vice versa).
+- **File Dropping**: Push config files or small scripts directly from a phone to the server without needing SMB.
+- **Remote Input**: Use a phone as a remote keyboard if physical access is temporarily needed.
+- **Run Commands**: Trigger predefined bash scripts remotely from a phone with a single tap.
 
 ---
 
