@@ -42,4 +42,5 @@ jobs:
             
             # Navigate to website and build/deploy Docker containers
             cd website
+            echo "CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}" > .env
             sudo docker-compose up -d --build
