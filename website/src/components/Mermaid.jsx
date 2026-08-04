@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 mermaid.initialize({
   startOnLoad: true,
@@ -9,29 +10,76 @@ mermaid.initialize({
 });
 
 const Mermaid = ({ chart }) => {
-  const mermaidRef = useRef(null);
+  const [svgContent, setSvgContent] = useState('');
 
   useEffect(() => {
-    if (mermaidRef.current) {
-      mermaid.contentLoaded();
-    }
+    // Generate a unique ID for this diagram
+    const id = `mermaid-svg-\${Math.round(Math.random() * 10000)}`;
+
+    // Render the mermaid chart directly to an SVG string
+    mermaid.render(id, chart).then((result) => {
+      // Inject CSS into the SVG string to force it to render at its native, lossless size
+      // rather than shrinking to fit the container width (which makes it look blurry).
+      let svg = result.svg;
+      svg = svg.replace('<svg ', '<svg style="max-width: none !important; height: auto;" ');
+      setSvgContent(svg);
+    });
   }, [chart]);
 
   return (
     <div
-      className="mermaid"
-      ref={mermaidRef}
       style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '2rem',
         backgroundColor: '#010409',
         borderRadius: '8px',
         border: '1px solid var(--border-color)',
-        overflowX: 'auto',
+        overflow: 'hidden',
+        position: 'relative',
+        height: '600px', // Fixed height container for panning/zooming
+        width: '100%',
+        cursor: 'grab',
       }}
     >
-      {chart}
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          zIndex: 10,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '0.75rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        🔍 Scroll to zoom, drag to pan
+      </div>
+
+      {svgContent ? (
+        <TransformWrapper
+          initialScale={1}
+          minScale={0.1}
+          maxScale={5}
+          centerOnInit={true}
+          wheel={{ step: 0.1 }}
+        >
+          <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+            <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+          </TransformComponent>
+        </TransformWrapper>
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          Rendering architecture...
+        </div>
+      )}
     </div>
   );
 };
