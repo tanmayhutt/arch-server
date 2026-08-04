@@ -14,7 +14,7 @@
 
 </div>
 
-> **[LIVE DEMO: arch-server.tanmaytiwari.me](https://arch-server.tanmaytiwari.me)**: The website for this repository is currently being served directly from the physical hardware documented below. It is completely self-hosted from a home network using Cloudflare Zero Trust Tunnels.
+> **<a href="https://arch-server.tanmaytiwari.me" target="_blank" rel="noopener noreferrer">LIVE DEMO: arch-server.tanmaytiwari.me</a>**: The website for this repository is currently being served directly from the physical hardware documented below. It is completely self-hosted from a home network using Cloudflare Zero Trust Tunnels.
 
 ---
 
