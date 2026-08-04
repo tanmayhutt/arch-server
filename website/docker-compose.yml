@@ -4,8 +4,6 @@ services:
   arch-server-web:
     build: .
     container_name: arch-server-docs
-    ports:
-      - "3000:80"
     restart: unless-stopped
 
   cloudflared:
