@@ -24,6 +24,46 @@ This repository documents the system architecture, configuration, and CI/CD depl
 
 The system functions as a highly secure, zero-trust edge server. It hosts a globally accessible production React website via **Cloudflare Tunnels**, automated via **GitHub Actions**, while securely operating as a local Network Attached Storage (NAS) node strictly within a **Tailscale** mesh network.
 
+```mermaid
+graph TD
+    %% External Actors
+    User[Public Internet Users]
+    Admin[Admin / Local Devices]
+
+    %% External Networks
+    CF[Cloudflare Edge Network]
+    TS[Tailscale Mesh Network]
+
+    %% Hardware & Host OS
+    subgraph Host [Hardware: Lenovo IdeaPad i3 / Arch Linux]
+        
+        %% Docker Network
+        subgraph Docker [Docker Engine]
+            CF_Tunnel[cloudflared]
+            Nginx[Nginx Web Server]
+            React[React Frontend / Vite]
+            
+            CF_Tunnel <-->|Reverse Proxy| Nginx
+            Nginx -->|Serves Static Files| React
+        end
+
+        %% Host Services
+        SSH[OpenSSH Server]
+        Samba[Samba NAS]
+        Ext4[(233 GiB Ext4 SSD)]
+
+        Samba --> Ext4
+    end
+
+    %% Connections
+    User -->|HTTPS| CF
+    CF <-->|Zero Trust Tunnel| CF_Tunnel
+    
+    Admin <-->|WireGuard VPN| TS
+    TS <--> SSH
+    TS <--> Samba
+```
+
 ---
 
 ## Repository Structure

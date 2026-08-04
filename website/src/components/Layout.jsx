@@ -23,6 +23,12 @@ const Layout = () => {
           >
             /desktop_env
           </NavLink>
+          <NavLink
+            to="/architecture"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          >
+            /system_architecture
+          </NavLink>
         </div>
       </nav>
 

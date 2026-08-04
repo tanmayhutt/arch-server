@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import ArchServer from './pages/ArchServer';
 import Dotfiles from './pages/Dotfiles';
 
+import Architecture from './pages/Architecture';
+
 function App() {
   return (
     <Routes>
@@ -11,6 +13,7 @@ function App() {
         <Route index element={<Home />} />
         <Route path="server" element={<ArchServer />} />
         <Route path="desktop" element={<Dotfiles />} />
+        <Route path="architecture" element={<Architecture />} />
       </Route>
     </Routes>
   );
