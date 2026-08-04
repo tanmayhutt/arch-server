@@ -17,9 +17,11 @@ const Home = () => {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               Tailscale mesh architecture, Samba storage configuration, and background telemetry daemons.
             </p>
-            <div style={{ marginTop: '1rem' }}>
-              <span className="badge arch">Arch Linux</span>
-              <span className="badge tailscale">Tailscale</span>
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="Arch Linux" style={{ height: '24px' }} />
+              <img src="https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white" alt="Tailscale" style={{ height: '24px' }} />
+              <img src="https://img.shields.io/badge/Samba_NAS-FF6600?style=for-the-badge&logo=linux&logoColor=white" alt="Samba" style={{ height: '24px' }} />
+              <img src="https://img.shields.io/badge/SSH-4D4D4D?style=for-the-badge&logo=openssh&logoColor=white" alt="SSH" style={{ height: '24px' }} />
             </div>
           </div>
         </Link>
@@ -61,6 +63,18 @@ const Home = () => {
               <li>- TUI: wlctl</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      <div className="server-panel delay-400" style={{ marginTop: '1rem' }}>
+        <h2>SELF_HOSTING_HUB</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          [INFO] System is configured as a scalable homelab. Utilizing Docker Compose to orchestrate independent microservices, databases, and APIs within isolated network boundaries.
+        </p>
+        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <img src="https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" style={{ height: '24px' }} />
+          <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions" style={{ height: '24px' }} />
+          <img src="https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare" style={{ height: '24px' }} />
         </div>
       </div>
     </div>
