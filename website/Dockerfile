@@ -1,11 +1,16 @@
 # Stage 1: Build the React application
 FROM node:22-alpine AS build
 WORKDIR /app
-# Copy the entire root context (assets + website)
-COPY . .
-# Navigate into website to run the build
+
+# Optimize Docker cache by copying ONLY package files first
+COPY website/package.json website/package-lock.json ./website/
 WORKDIR /app/website
 RUN npm ci
+
+# Then copy the rest of the application
+WORKDIR /app
+COPY . .
+WORKDIR /app/website
 RUN npm run build
 
 # Stage 2: Serve with Nginx

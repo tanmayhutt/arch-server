@@ -23,6 +23,9 @@ const Mermaid = ({ chart }) => {
       let svg = result.svg;
       svg = svg.replace('<svg ', '<svg style="max-width: none !important; height: auto;" ');
       setSvgContent(svg);
+    }).catch(error => {
+      console.error("Mermaid parsing error:", error);
+      setSvgContent(`<div style="color: red; padding: 20px;"><pre>\${error.message || error}</pre></div>`);
     });
   }, [chart]);
 

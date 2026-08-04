@@ -27,46 +27,46 @@ The system functions as a highly secure, zero-trust edge server. It hosts a glob
 ```mermaid
 graph TD
     %% EXTERNAL
-    User[Public Web Browser]
-    Admin[Admin Devices]
-    GH[GitHub Actions CI/CD]
+    User["Public Web Browser"]
+    Admin["Admin Devices"]
+    GH["GitHub Actions CI/CD"]
 
     %% CLOUDFLARE EDGE
-    subgraph Cloudflare [Cloudflare Global Network]
-        DNS[DNS Resolution]
-        WAF[Web Application Firewall]
-        CDN[CDN / Cache]
-        ZT[Zero Trust Edge]
+    subgraph Cloudflare ["Cloudflare Global Network"]
+        DNS["DNS Resolution"]
+        WAF["Web Application Firewall"]
+        CDN["CDN / Cache"]
+        ZT["Zero Trust Edge"]
         DNS --> WAF --> CDN --> ZT
     end
-    User -->|HTTPS| DNS
+    User -->|"HTTPS"| DNS
 
     %% TAILSCALE
-    subgraph Tailscale [Tailscale Mesh VPN]
-        DERP[Tailscale Control Plane & DERP Relays]
+    subgraph Tailscale ["Tailscale Mesh VPN"]
+        DERP["Tailscale Control Plane & DERP Relays"]
     end
-    Admin <-->|WireGuard P2P| DERP
-    GH -->|SSH Deployment via Tailscale| DERP
+    Admin <-->|"WireGuard P2P"| DERP
+    GH -->|"SSH Deployment via Tailscale"| DERP
 
     %% PHYSICAL HARDWARE
-    subgraph Hardware [Lenovo IdeaPad 3 - Core i3 / 8GB RAM]
-        WLAN[802.11ac Wi-Fi Interface]
-        SSD[(233 GiB Ext4 SSD)]
+    subgraph Hardware ["Lenovo IdeaPad 3 - Core i3 / 8GB RAM"]
+        WLAN["802.11ac Wi-Fi Interface"]
+        SSD[("233 GiB Ext4 SSD")]
 
         %% ARCH LINUX OS
-        subgraph ArchHost [Arch Linux Host OS]
-            TS0[tailscale0 Interface 100.x.x.x]
-            SSHD[OpenSSH Daemon]
-            SMBD[Samba NAS Daemon]
+        subgraph ArchHost ["Arch Linux Host OS"]
+            TS0["tailscale0 Interface 100.x.x.x"]
+            SSHD["OpenSSH Daemon"]
+            SMBD["Samba NAS Daemon"]
             
             %% DOCKER
-            subgraph Docker [Docker Engine & Bridge Network]
-                CF_Tunnel[Container: cloudflared]
-                NGINX[Container: Nginx Alpine]
-                REACT[React / Vite Static Bundle]
+            subgraph Docker ["Docker Engine & Bridge Network"]
+                CF_Tunnel["Container: cloudflared"]
+                NGINX["Container: Nginx Alpine"]
+                REACT["React / Vite Static Bundle"]
                 
-                CF_Tunnel <-->|Reverse Proxy HTTP| NGINX
-                NGINX -->|Serves| REACT
+                CF_Tunnel <-->|"Reverse Proxy HTTP"| NGINX
+                NGINX -->|"Serves"| REACT
             end
         end
         
@@ -76,12 +76,12 @@ graph TD
         
         TS0 <--> SSHD
         TS0 <--> SMBD
-        SMBD -->|Read/Write| SSD
+        SMBD -->|"Read/Write"| SSD
     end
     
     %% External to Hardware Bindings
-    ZT <-->|Outbound-Only Encrypted Tunnel| CF_Tunnel
-    DERP <-->|WireGuard NAT Traversal| TS0
+    ZT <-->|"Outbound-Only Encrypted Tunnel"| CF_Tunnel
+    DERP <-->|"WireGuard NAT Traversal"| TS0
 ```
 
 ---
