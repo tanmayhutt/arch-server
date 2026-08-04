@@ -2,7 +2,7 @@
 
 ![fastfetch](./fastfetch.png)
 
-# 🖥️ arch-server
+# arch-server
 
 **A repurposed Lenovo IdeaPad running headless Arch Linux as a personal home server and globally-accessible NAS.**
 
@@ -15,7 +15,7 @@
 
 ---
 
-## 📖 The Story
+## The Story
 
 This is a **spare Lenovo IdeaPad** that was previously used as a daily driver running Arch Linux with a full Hyprland desktop setup (those configs are preserved at [hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)).
 
@@ -23,7 +23,7 @@ Rather than letting it collect dust, it was repurposed into a personal home serv
 
 ---
 
-## 🔧 Hardware
+## Hardware
 
 | Component | Details |
 |-----------|---------|
@@ -38,7 +38,7 @@ Rather than letting it collect dust, it was repurposed into a personal home serv
 
 ---
 
-## 🌐 Remote Access — SSH + Tailscale
+## Remote Access — SSH + Tailscale
 
 The server is controlled entirely via **SSH over a private [Tailscale](https://tailscale.com/) mesh network**.
 
@@ -57,7 +57,7 @@ ssh <username>@<your-tailscale-ip>
 
 ---
 
-## 💾 NAS — Network Attached Storage
+## NAS — Network Attached Storage
 
 The home directory is shared over the **private Tailscale network** using **Samba (SMB)** — the universal file sharing protocol natively supported by macOS, Windows, iOS, and Android — with no public exposure.
 
@@ -89,20 +89,7 @@ The home directory is shared over the **private Tailscale network** using **Samb
    valid users = <username>
 ```
 
----
-
-## 📱 Waydroid — Android on Linux
-
-**Waydroid** is running as a container service, allowing Android apps to run natively inside the Linux environment. Purely experimental on this machine.
-
-```bash
-waydroid session start
-waydroid show-full-ui
-```
-
----
-
-## 🌐 WiFi Management — `wlctl`
+## WiFi Management — `wlctl`
 
 WiFi is managed with **[wlctl](https://github.com/sandorex/wlctl)** — a beautiful terminal-based WiFi TUI that works natively with NetworkManager.
 
@@ -128,7 +115,7 @@ This is a fork of the popular `impala` TUI, specifically designed for NetworkMan
 
 ---
 
-## 📁 Yazi — TUI File Manager
+## Yazi — TUI File Manager
 
 **[Yazi](https://github.com/sxyazi/yazi)** is used for visually navigating the server's file system over SSH with a blazing-fast 3-column layout, file previews, and syntax highlighting.
 
@@ -168,7 +155,7 @@ prepend_previewers = [
 
 ---
 
-## 📜 Custom Scripts (`~/scripts/`)
+## Custom Scripts (`~/scripts/`)
 
 Small utility scripts for quick system info over SSH:
 
@@ -203,7 +190,7 @@ echo "Logged in as: $(whoami)@$(hostname)"
 
 ---
 
-## 🚀 Setting This Up From Scratch
+## Setting This Up From Scratch
 
 ### 1. Enable SSH
 ```bash
@@ -243,13 +230,13 @@ sudo systemctl enable --now earlyoom
 
 ---
 
-## 🗂️ Related
+## Related
 
 - **[hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles)** — The Hyprland, Waybar, Wofi, Kitty, Cava, and Hyprlock configs running on this same machine.
 
 ---
 
-## 📝 Lessons Learned
+## Lessons Learned
 
 - **i3 CPUs cannot run local LLMs practically.** Tried `ollama` with `phi3:latest` (2.2GB model) — it responded but was far too slow without a GPU. A dedicated GPU is essential for local AI inference.
 - **Samba over Tailscale is incredibly powerful.** Mounting a Linux drive on a Mac through Finder feels exactly like plugging in a USB — except it works from anywhere in the world.
