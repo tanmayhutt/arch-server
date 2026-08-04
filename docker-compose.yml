@@ -1,6 +1,8 @@
 services:
   arch-server-web:
-    build: ./website
+    build:
+      context: .
+      dockerfile: website/Dockerfile
     container_name: arch-server-docs
     restart: unless-stopped
     security_opt:
