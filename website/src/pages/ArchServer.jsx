@@ -1,44 +1,30 @@
-import { Terminal, Shield, FolderGit2, HardDrive } from 'lucide-react';
-
 const ArchServer = () => {
   return (
     <div className="animate-fade-in">
-      <div style={{ marginBottom: '3rem' }}>
-        <span className="badge arch">arch-server</span>
-        <h1 style={{ marginTop: '1rem' }}>Server Node Architecture</h1>
-        <p style={{ fontSize: '1.2rem' }}>Detailed breakdown of the networking, storage, and telemetry subsystems.</p>
+      <div style={{ marginBottom: '2rem' }}>
+        <span className="badge arch">module: arch-server</span>
+        <h1 style={{ marginTop: '1rem' }}>SERVER_ARCHITECTURE</h1>
+        <p>[INFO] Subsystem breakdown: networking, storage, telemetry.</p>
       </div>
 
-      <div className="glass-panel delay-100" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <Shield size={24} color="#00ffcc" />
-          <h2 style={{ margin: 0 }}>Network Topology & Remote Access</h2>
-        </div>
+      <div className="server-panel delay-100">
+        <h2>/net_topology</h2>
         <p>
-          Administrative access is brokered exclusively via <strong>SSH over Tailscale</strong>. This design provides several critical security advantages, including zero ingress ports, NAT traversal, and end-to-end encryption.
+          [SECURE] Administrative access brokered exclusively via SSH over Tailscale. Zero ingress ports. NAT traversal active.
         </p>
         <pre>
           <code>ssh user@&lt;tailscale-ip&gt;</code>
         </pre>
-        <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-          <em>The server operates with zero exposure to the public internet. Access is strictly confined to the Tailscale mesh.</em>
-        </p>
       </div>
 
-      <div className="glass-panel delay-200" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <HardDrive size={24} color="#ff6600" />
-          <h2 style={{ margin: 0 }}>Storage Subsystem (Samba NAS)</h2>
-        </div>
+      <div className="server-panel delay-200">
+        <h2>/storage_subsystem</h2>
         <p>
-          The primary storage interface is implemented using the Server Message Block (SMB) protocol via Samba, facilitating seamless cross-platform file operations across the mesh network.
+          [MOUNTED] Server Message Block (SMB) protocol via Samba. Cross-platform file operations across mesh network.
         </p>
-        <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-          <h4 style={{ marginBottom: '0.5rem' }}>Client Integration</h4>
-          <ul style={{ paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
-            <li><strong>macOS / iOS:</strong> <code>smb://&lt;tailscale-ip&gt;</code></li>
-            <li><strong>Windows:</strong> <code>\\&lt;tailscale-ip&gt;</code></li>
-          </ul>
+        <div style={{ padding: '1rem', borderLeft: '2px solid var(--accent-secondary)', marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+          <p style={{ margin: 0 }}>&gt; macOS / iOS: smb://&lt;tailscale-ip&gt;</p>
+          <p style={{ margin: 0 }}>&gt; Windows: \\&lt;tailscale-ip&gt;</p>
         </div>
         <pre>
           <code>
@@ -58,28 +44,22 @@ const ArchServer = () => {
       </div>
 
       <div className="grid-2 delay-300">
-        <div className="glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <Terminal size={20} />
-            <h3 style={{ margin: 0 }}>Administrative Tools</h3>
-          </div>
-          <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <li><strong>wlctl:</strong> Wireless network provisioning TUI built for NetworkManager.</li>
-            <li><strong>yazi:</strong> Asynchronous TUI file manager with advanced preview capabilities.</li>
-            <li><strong>KDE Connect:</strong> Background telemetry for clipboard synchronization and payload deployment.</li>
+        <div className="server-panel">
+          <h3>/admin_tools</h3>
+          <ul style={{ listStyle: 'none', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            <li>- <strong>wlctl:</strong> WLAN provisioning TUI</li>
+            <li>- <strong>yazi:</strong> Async TUI file manager</li>
+            <li>- <strong>KDE Connect:</strong> Telemetry & payload drop</li>
           </ul>
         </div>
         
-        <div className="glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <FolderGit2 size={20} />
-            <h3 style={{ margin: 0 }}>Utility Scripts</h3>
-          </div>
-          <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <li><code>battery.sh</code> - Raw power telemetry</li>
-            <li><code>network-status.sh</code> - Active WLAN state</li>
-            <li><code>whatsong.sh</code> - Media playback state</li>
-            <li><code>whoami.sh</code> - Session identity verification</li>
+        <div className="server-panel">
+          <h3>/utility_scripts</h3>
+          <ul style={{ listStyle: 'none', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            <li>- <code>battery.sh</code> (Power)</li>
+            <li>- <code>network-status.sh</code> (WLAN state)</li>
+            <li>- <code>whatsong.sh</code> (Media state)</li>
+            <li>- <code>whoami.sh</code> (Session identity)</li>
           </ul>
         </div>
       </div>
