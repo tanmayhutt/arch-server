@@ -21,7 +21,6 @@ jobs:
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: 1.68.1
-          tags: tag:ci
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
