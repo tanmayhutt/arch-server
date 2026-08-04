@@ -30,8 +30,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             # Navigate to the services directory
-            mkdir -p ~/services/arch-server-website
-            cd ~/services/arch-server-website
+            mkdir -p ~/services/arch-server
+            cd ~/services/arch-server
             
             # Clone or update the repository
             if [ ! -d ".git" ]; then
