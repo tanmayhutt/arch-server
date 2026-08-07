@@ -1,3 +1,9 @@
 .DS_Store
 *.DS_Store
 .env
+
+# Antigravity IDE / Second Brain Context
+context.md
+implementation_plan.md
+walkthrough.md
+task.md
