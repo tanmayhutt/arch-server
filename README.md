@@ -146,16 +146,71 @@ The application runs in isolated, optimized Docker containers:
 
 ## Administrative Network & Remote Access
 
-Administrative and file-level access is strictly isolated from the public internet. Access is brokered exclusively via **SSH over Tailscale**.
+The server supports two remote access methods depending on the connecting device.
 
-### SSH over Tailscale
-- **NAT Traversal:** Ensures seamless connectivity regardless of the host's physical network location.
-- **End-to-End Encryption:** Secures all administrative traffic via WireGuard tunnels.
-- **Identity-Based Access:** Restricts visibility and access to authenticated nodes within the designated Tailscale tenant.
+### Method 1: SSH over Tailscale (Trusted Devices)
+
+For devices with Tailscale installed and authenticated. This is the default method used by the CI/CD pipeline.
+
+- **NAT Traversal:** Seamless connectivity regardless of physical network location.
+- **End-to-End Encryption:** All traffic secured via WireGuard tunnels.
+- **Identity-Based Access:** Restricted to authenticated nodes within the Tailscale tenant.
 
 ```bash
-ssh <username>@<your-tailscale-ip>
+ssh <username>@<tailscale-ip>
 ```
+
+---
+
+### Method 2: SSH over Cloudflare Access (Any Device, Anywhere)
+
+For accessing the server from any machine without Tailscale — a work laptop, a phone, a public terminal. Routed through the existing `cloudflared` infrastructure with a mandatory identity verification layer.
+
+**Security model (two factors required):**
+- **Email OTP** — Cloudflare Access sends a one-time PIN to the owner's email before any connection is allowed.
+- **SSH Private Key** — Cryptographic key on the connecting device is required after authentication.
+
+**No open ports are exposed.** Traffic is routed through the same Cloudflare Zero Trust tunnel used by the website.
+
+#### Client Setup (one-time per device)
+
+1. Install `cloudflared`:
+```bash
+# macOS
+brew install cloudflare/cloudflare/cloudflared
+
+# Linux (Debian/Ubuntu)
+sudo apt install cloudflared
+
+# Windows
+winget install Cloudflare.cloudflared
+```
+
+2. Add to `~/.ssh/config`:
+```
+Host ssh.tanmaytiwari.me
+  ProxyCommand cloudflared access ssh --hostname %h
+  User tanmay
+  IdentityFile ~/.ssh/id_ed25519
+  ServerAliveInterval 60
+```
+
+3. Connect from anywhere:
+```bash
+ssh ssh.tanmaytiwari.me
+# First use: browser opens → enter email → enter OTP → shell
+# Repeat within 8h session: instant connect
+```
+
+#### Access Comparison
+
+| | Tailscale SSH | Cloudflare Access SSH |
+|---|---|---|
+| Requires Tailscale | YES | No |
+| Works from any device | No | **YES** |
+| Zero open ports | YES | **YES** |
+| Auth mechanism | Device trust | **Email OTP + SSH key** |
+| Audit logs | No | **YES (Cloudflare dashboard)** |
 
 ---
 

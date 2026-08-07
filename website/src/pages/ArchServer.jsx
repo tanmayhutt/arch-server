@@ -28,12 +28,84 @@ const ArchServer = () => {
       <div className="server-panel delay-100">
         <h2>/net_topology</h2>
         <p>
-          [SECURE] Administrative access brokered exclusively via SSH over Tailscale. Zero ingress
-          ports. NAT traversal active.
+          [SECURE] Zero open ports on the physical router. All inbound access is brokered via
+          outbound-only tunnels. Two independent access paths are provisioned.
         </p>
-        <pre>
-          <code>ssh user@&lt;tailscale-ip&gt;</code>
-        </pre>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1rem',
+            marginTop: '1rem',
+          }}
+        >
+          <div
+            style={{
+              padding: '1rem',
+              borderLeft: '2px solid var(--accent-secondary)',
+              backgroundColor: 'rgba(88,166,255,0.04)',
+            }}
+          >
+            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+              Tailscale (Trusted Devices)
+            </p>
+            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              WireGuard mesh VPN. Requires Tailscale installed and authenticated.
+            </p>
+            <pre style={{ margin: 0, fontSize: '0.8rem' }}>
+              <code>ssh user@&lt;tailscale-ip&gt;</code>
+            </pre>
+          </div>
+          <div
+            style={{
+              padding: '1rem',
+              borderLeft: '2px solid #f38020',
+              backgroundColor: 'rgba(243,128,32,0.04)',
+            }}
+          >
+            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+              Cloudflare Access SSH (Any Device)
+            </p>
+            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              SSH over HTTPS via Cloudflare tunnel. Email OTP + SSH key required. No Tailscale needed.
+            </p>
+            <pre style={{ margin: 0, fontSize: '0.8rem' }}>
+              <code>ssh ssh.tanmaytiwari.me</code>
+            </pre>
+          </div>
+        </div>
+      </div>
+
+      <div className="server-panel delay-150">
+        <h2>/remote_access</h2>
+        <p>
+          [GLOBAL] SSH is accessible from any device worldwide via Cloudflare Access. Traffic is routed
+          through the existing Zero Trust tunnel — no additional open ports required.
+        </p>
+        <div style={{ marginTop: '1rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            Connection flow:
+          </p>
+          <div
+            style={{
+              padding: '1rem',
+              borderLeft: '2px solid #f38020',
+              color: 'var(--text-secondary)',
+              fontSize: '0.85rem',
+              lineHeight: '2',
+            }}
+          >
+            <p style={{ margin: 0 }}>1. Run: <code>ssh ssh.tanmaytiwari.me</code></p>
+            <p style={{ margin: 0 }}>2. Browser opens → Cloudflare Access identity check</p>
+            <p style={{ margin: 0 }}>3. One-time PIN sent to owner email</p>
+            <p style={{ margin: 0 }}>4. Short-lived SSH certificate issued (~8h)</p>
+            <p style={{ margin: 0 }}>5. Shell access granted. No Tailscale, no open ports.</p>
+          </div>
+        </div>
+        <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          Client prerequisite: <code>cloudflared</code> CLI + SSH key pair.
+          See <a href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)' }}>README</a> for full setup instructions.
+        </p>
       </div>
 
       <div className="server-panel delay-200">
