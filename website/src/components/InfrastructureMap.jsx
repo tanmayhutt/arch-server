@@ -64,10 +64,6 @@ const InfrastructureMap = () => {
           Public traffic passes through Cloudflare and an outbound tunnel. Private administration passes through Tailscale. Both terminate at the physical Arch Linux server.
         </desc>
         <defs>
-          <filter id="route-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
           <linearGradient id="host-fill" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#12212a" />
             <stop offset="1" stopColor="#080d11" />
@@ -83,7 +79,7 @@ const InfrastructureMap = () => {
           {Object.entries(paths).slice(0, 3).map(([key, path], index) => (
             <g key={key}>
               <path id={key} d={path} />
-              {!shouldReduceMotion && <circle r="3" filter="url(#route-glow)">
+              {!shouldReduceMotion && <circle r="2.4">
                 <animateMotion dur={`${2.8 + index * 0.45}s`} repeatCount="indefinite" path={path} />
               </circle>}
             </g>
@@ -94,7 +90,7 @@ const InfrastructureMap = () => {
           {[paths.privateA, paths.privateB].map((path, index) => (
             <g key={`private-${index}`}>
               <path d={path} />
-              {!shouldReduceMotion && <circle r="3" filter="url(#route-glow)">
+              {!shouldReduceMotion && <circle r="2.4">
                 <animateMotion dur={`${3.2 + index * 0.5}s`} repeatCount="indefinite" path={path} />
               </circle>}
             </g>
@@ -141,7 +137,7 @@ const InfrastructureMap = () => {
 
         <g className="host-node" transform="translate(850 188)">
           <rect width="126" height="136" rx="12" fill="url(#host-fill)" />
-          <circle cx="18" cy="20" r="4" />
+          <rect className="host-status-mark" x="14" y="16" width="8" height="8" rx="1" />
           <text x="30" y="24" className="host-label">PHYSICAL NODE</text>
           <line x1="14" x2="112" y1="38" y2="38" />
           <text x="14" y="62">ARCH LINUX</text>

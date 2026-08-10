@@ -73,10 +73,6 @@ const DetailedArchitectureMap = () => {
                 <pattern id="detail-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                   <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(153,181,194,0.035)" strokeWidth="1" />
                 </pattern>
-                <filter id="detail-glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
                 <marker id="arrow-public" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#8bd2ed" />
                 </marker>
@@ -138,13 +134,6 @@ const DetailedArchitectureMap = () => {
                 <path d="M 1110 735 H 1150" />
                 <path d="M 1330 735 H 1360" />
                 <path d="M 1240 706 C 1260 620, 1245 310, 1220 174" />
-              </g>
-
-              <g className="topology-packets" filter="url(#detail-glow)" aria-hidden="true">
-                <circle className="packet-public packet-delay-0" cx="274" cy="145" r="3" />
-                <circle className="packet-public packet-delay-1" cx="546" cy="145" r="3" />
-                <circle className="packet-private packet-delay-2" cx="690" cy="449" r="3" />
-                <circle className="packet-deploy packet-delay-1" cx="462" cy="735" r="3" />
               </g>
 
               <TopologyNode x={58} y={116} title="VISITOR" detail="public HTTPS request" />

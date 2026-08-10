@@ -28,7 +28,7 @@ const planes = [
 const Architecture = () => (
   <div className="site-page architecture-page">
     <header className="page-header page-width">
-      <div className="eyebrow"><span className="live-dot" /> system architecture</div>
+      <div className="eyebrow">system architecture</div>
       <div className="page-header-grid">
         <h1>Two trust planes.<br />One physical origin.</h1>
         <p>
@@ -40,7 +40,7 @@ const Architecture = () => (
     <section className="page-width architecture-map-section">
       <div className="panel-chrome">
         <span>LOSSLESS LOGICAL TOPOLOGY</span>
-        <span className="panel-status"><i /> DOCUMENTED ROUTES</span>
+        <span>DOCUMENTED ROUTES</span>
       </div>
       <DetailedArchitectureMap />
     </section>

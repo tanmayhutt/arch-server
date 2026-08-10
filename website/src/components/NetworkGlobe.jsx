@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 const globeNodes = [
@@ -17,13 +17,6 @@ const routePairs = [
   [4, 2],
   [5, 2],
 ];
-
-const interactionLabels = {
-  idle: "HOVER OR TAP TO DISPERSE",
-  fragmenting: "PARTICLES DISPERSING",
-  reforming: "RESTORING FORM",
-  static: "MOTION REDUCED",
-};
 
 const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 const toRadians = (degrees) => (degrees * Math.PI) / 180;
@@ -448,20 +441,6 @@ const NetworkGlobe = ({ className = "" }) => {
       <canvas ref={canvasRef} aria-hidden="true" />
       <div className="globe-coordinate globe-coordinate-top">EDGE NETWORK / GLOBAL</div>
       <div className="globe-coordinate globe-coordinate-bottom">ORIGIN / PRIVATE NODE</div>
-      <div className="globe-interaction-state" aria-hidden="true">
-        <span>PARTICLE MODEL</span>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.strong
-            key={interactionPhase}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: "easeOut" }}
-          >
-            {interactionLabels[interactionPhase]}
-          </motion.strong>
-        </AnimatePresence>
-      </div>
     </div>
   );
 };

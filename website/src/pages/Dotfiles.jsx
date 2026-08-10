@@ -25,7 +25,7 @@ const bindings = [
 const Dotfiles = () => (
   <div className="site-page detail-page desktop-page">
     <header className="page-header page-width">
-      <div className="eyebrow"><span className="live-dot dormant-dot" /> desktop layer / retained locally</div>
+      <div className="eyebrow">desktop layer / retained locally</div>
       <div className="page-header-grid">
         <h1>A desktop when the node needs one.</h1>
         <div className="header-side">

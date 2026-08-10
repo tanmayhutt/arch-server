@@ -13,7 +13,6 @@ import {
   Terminal,
   Wrench,
 } from "lucide-react";
-import MagicCard from "@/components/magicui/magic-card";
 
 const accessMethods = [
   {
@@ -69,7 +68,7 @@ const continuity = [
 const ArchServer = () => (
   <div className="site-page detail-page">
     <header className="page-header page-width">
-      <div className="eyebrow"><span className="live-dot" /> documented node / physical origin</div>
+      <div className="eyebrow">documented node / physical origin</div>
       <div className="page-header-grid">
         <h1>The machine behind the edge.</h1>
         <div className="header-side">
@@ -82,7 +81,7 @@ const ArchServer = () => (
     </header>
 
     <section className="page-width node-dashboard">
-      <div className="panel-chrome"><span>NODE PROFILE / DOCUMENTED STATE</span><span className="panel-status"><i /> PHYSICAL HARDWARE</span></div>
+      <div className="panel-chrome"><span>NODE PROFILE / DOCUMENTED STATE</span><span>PHYSICAL HARDWARE</span></div>
       <div className="node-dashboard-grid">
         <div className="node-core">
           <div className="node-core-icon"><Server size={31} strokeWidth={1.3} /></div>
@@ -108,17 +107,10 @@ const ArchServer = () => (
       </div>
       <div className="access-method-grid">
         {accessMethods.map(({ index, icon: Icon, title, label, description, command, tone }) => (
-          <MagicCard
-            as="article"
-            className={`access-method method-${tone}`}
-            key={index}
-            size={430}
-            spotlightColor="rgba(76, 180, 221, 0.04)"
-            spotlightBorderColor="rgba(139, 210, 237, 0.12)"
-          >
+          <article className={`access-method method-${tone}`} key={index}>
             <div className="access-method-top"><span>{index}</span><Icon size={20} strokeWidth={1.5} /></div>
             <h3>{title}</h3><small>{label}</small><p>{description}</p><code>{command}</code>
-          </MagicCard>
+          </article>
         ))}
       </div>
     </section>
