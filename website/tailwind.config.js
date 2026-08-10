@@ -50,6 +50,11 @@ export default {
         "shiny-text": "shiny-text 8s infinite",
         "background-position-spin": "background-position-spin 3000ms infinite alternate",
         "grid": "grid 15s linear infinite",
+        "meteor": "meteor 5s linear infinite",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
+        "spin-around": "spin-around calc(var(--speed) * 2) infinite linear",
+        "slide": "slide var(--speed) ease-in-out infinite alternate",
+        "sparkle": "sparkle 1.5s ease-in-out infinite",
       },
       keyframes: {
         "shiny-text": {
@@ -67,6 +72,42 @@ export default {
         "grid": {
           "0%": { transform: "translateY(-50%)" },
           "100%": { transform: "translateY(0)" },
+        },
+        "meteor": {
+          "0%": { transform: "rotate(215deg) translateX(0)", opacity: 1 },
+          "70%": { opacity: 1 },
+          "100%": {
+            transform: "rotate(215deg) translateX(-500px)",
+            opacity: 0,
+          },
+        },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
+        "spin-around": {
+          "0%": {
+            transform: "translateZ(0) rotate(0)",
+          },
+          "15%, 35%": {
+            transform: "translateZ(0) rotate(90deg)",
+          },
+          "65%, 85%": {
+            transform: "translateZ(0) rotate(270deg)",
+          },
+          "100%": {
+            transform: "translateZ(0) rotate(360deg)",
+          },
+        },
+        "slide": {
+          to: {
+            transform: "translate(calc(100cqw - 100%), 0)",
+          },
+        },
+        "sparkle": {
+          "0%, 100%": { opacity: 0.2, transform: "scale(0.8)" },
+          "50%": { opacity: 1, transform: "scale(1.2)" },
         },
       },
     },
