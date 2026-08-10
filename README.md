@@ -20,7 +20,7 @@
 
 ## Architectural Overview
 
-This repository documents the system architecture, configuration, and CI/CD deployment strategy for a headless Arch Linux server deployed on a repurposed Lenovo IdeaPad. 
+This repository documents the system architecture, configuration, and CI/CD deployment strategy for a headless Arch Linux server deployed on a repurposed Lenovo IdeaPad.
 
 The system functions as a highly secure, zero-trust edge server. It hosts a globally accessible production React website via **Cloudflare Tunnels**, automated via **GitHub Actions**, while securely operating as a local Network Attached Storage (NAS) node strictly within a **Tailscale** mesh network.
 
@@ -58,27 +58,27 @@ graph TD
             TS0["tailscale0 Interface 100.x.x.x"]
             SSHD["OpenSSH Daemon"]
             SMBD["Samba NAS Daemon"]
-            
+
             %% DOCKER
             subgraph Docker ["Docker Engine & Bridge Network"]
                 CF_Tunnel["Container: cloudflared"]
                 NGINX["Container: Nginx Alpine"]
                 REACT["React / Vite Static Bundle"]
-                
+
                 CF_Tunnel <-->|"Reverse Proxy HTTP"| NGINX
                 NGINX -->|"Serves"| REACT
             end
         end
-        
+
         %% Internal OS bindings
         WLAN <--> TS0
         WLAN <--> CF_Tunnel
-        
+
         TS0 <--> SSHD
         TS0 <--> SMBD
         SMBD -->|"Read/Write"| SSD
     end
-    
+
     %% External to Hardware Bindings
     ZT <-->|"Outbound-Only Encrypted Tunnel"| CF_Tunnel
     DERP <-->|"WireGuard NAT Traversal"| TS0
