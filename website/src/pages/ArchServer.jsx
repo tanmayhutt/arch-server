@@ -1,14 +1,14 @@
 import { Code, Network, Shield, Server, Terminal, HardDrive, Wrench } from "lucide-react";
-import SparklesText from "@/components/magicui/sparkles-text";
-import { BorderBeam } from "@/components/magicui/border-beam";
-import Meteors from "@/components/magicui/meteors";
+import AnimatedShinyText from "@/components/magicui/animated-shiny-text";
+import MagicCard from "@/components/magicui/magic-card";
+import Particles from "@/components/magicui/particles";
 
 const ArchServer = () => {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden bg-black selection:bg-purple-500/30">
 
       {/* Background */}
-      <Meteors number={25} />
+      <Particles className="absolute inset-0" quantity={60} ease={80} color="#ffffff" refresh />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-black to-black z-0 pointer-events-none" />
 
       {/* ── Header ───────────────────────────────────────── */}
@@ -19,9 +19,9 @@ const ArchServer = () => {
           </span>
         </div>
         
-        <div className="mb-6">
-          <SparklesText text="SERVER_ARCHITECTURE" colors={{ first: "#3b82f6", second: "#a855f7" }} className="text-4xl md:text-5xl" />
-        </div>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white">
+          SERVER_ARCHITECTURE
+        </h1>
 
         <p className="text-lg text-neutral-400 max-w-2xl leading-relaxed mb-8">
           Subsystem breakdown: networking, storage, remote access, telemetry.
@@ -33,7 +33,6 @@ const ArchServer = () => {
           rel="noopener noreferrer"
           className="group relative inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white overflow-hidden shadow-[0_0_30px_-10px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.2)]"
         >
-          <BorderBeam size={50} duration={3} delay={0.5} colorFrom="#ffffff" colorTo="#3b82f6" />
           <Code className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" />
           View Source Code
         </a>
@@ -42,8 +41,11 @@ const ArchServer = () => {
       <div className="w-full max-w-4xl flex flex-col gap-8 z-10 relative">
 
         {/* ── Net Topology ─────────────────────────────────── */}
-        <div className="relative p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-[0_0_50px_-20px_rgba(59,130,246,0.15)] overflow-hidden">
-          <BorderBeam size={300} duration={12} delay={1} colorFrom="#3b82f6" colorTo="#0ea5e9" />
+        <MagicCard 
+          className="p-8 shadow-[0_0_50px_-20px_rgba(59,130,246,0.15)] h-auto"
+          spotlightColor="rgba(59,130,246,0.05)"
+          spotlightBorderColor="rgba(59,130,246,0.4)"
+        >
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4 text-white">
               <Network className="w-6 h-6 text-blue-400" />
@@ -76,11 +78,14 @@ const ArchServer = () => {
               </div>
             </div>
           </div>
-        </div>
+        </MagicCard>
 
         {/* ── Remote Access ─────────────────────────────────── */}
-        <div className="relative p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-[0_0_50px_-20px_rgba(249,115,22,0.15)] overflow-hidden">
-          <BorderBeam size={300} duration={14} delay={3} colorFrom="#f97316" colorTo="#a855f7" />
+        <MagicCard 
+          className="p-8 shadow-[0_0_50px_-20px_rgba(249,115,22,0.15)] h-auto"
+          spotlightColor="rgba(249,115,22,0.05)"
+          spotlightBorderColor="rgba(249,115,22,0.4)"
+        >
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4 text-white">
               <Shield className="w-6 h-6 text-orange-400" />
@@ -127,11 +132,14 @@ const ArchServer = () => {
               </div>
             </div>
           </div>
-        </div>
+        </MagicCard>
 
         {/* ── Storage ──────────────────────────────────────── */}
-        <div className="relative p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-[0_0_50px_-20px_rgba(16,185,129,0.15)] overflow-hidden">
-          <BorderBeam size={200} duration={10} delay={5} colorFrom="#10b981" colorTo="#34d399" />
+        <MagicCard 
+          className="p-8 shadow-[0_0_50px_-20px_rgba(16,185,129,0.15)] h-auto"
+          spotlightColor="rgba(16,185,129,0.05)"
+          spotlightBorderColor="rgba(16,185,129,0.4)"
+        >
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4 text-white">
               <HardDrive className="w-6 h-6 text-emerald-400" />
@@ -160,12 +168,15 @@ const ArchServer = () => {
    writable = yes`}
             </pre>
           </div>
-        </div>
+        </MagicCard>
 
         {/* ── Admin Tools + Scripts ─────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="relative p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-[0_0_40px_-15px_rgba(255,255,255,0.05)] overflow-hidden">
-            <BorderBeam size={150} duration={8} delay={2} colorFrom="#737373" colorTo="#d4d4d4" />
+          <MagicCard 
+            className="p-8 shadow-[0_0_40px_-15px_rgba(255,255,255,0.05)] h-auto"
+            spotlightColor="rgba(255,255,255,0.03)"
+            spotlightBorderColor="rgba(255,255,255,0.2)"
+          >
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-5 text-white">
                 <Wrench className="w-5 h-5 text-neutral-400" />
@@ -195,10 +206,13 @@ const ArchServer = () => {
                 </li>
               </ul>
             </div>
-          </div>
+          </MagicCard>
 
-          <div className="relative p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-[0_0_40px_-15px_rgba(255,255,255,0.05)] overflow-hidden">
-            <BorderBeam size={150} duration={8} delay={6} colorFrom="#737373" colorTo="#d4d4d4" />
+          <MagicCard 
+            className="p-8 shadow-[0_0_40px_-15px_rgba(255,255,255,0.05)] h-auto"
+            spotlightColor="rgba(255,255,255,0.03)"
+            spotlightBorderColor="rgba(255,255,255,0.2)"
+          >
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-5 text-white">
                 <Terminal className="w-5 h-5 text-neutral-400" />
@@ -227,7 +241,7 @@ const ArchServer = () => {
                 </li>
               </ul>
             </div>
-          </div>
+          </MagicCard>
         </div>
 
       </div>

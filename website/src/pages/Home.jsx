@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom';
 import { Server, Monitor, Shield, Box, Code, Terminal } from "lucide-react";
 import AnimatedShinyText from "@/components/magicui/animated-shiny-text";
 import { BentoCard, BentoGrid } from "@/components/magicui/bento-grid";
-import Meteors from "@/components/magicui/meteors";
-import { BorderBeam } from "@/components/magicui/border-beam";
-import SparklesText from "@/components/magicui/sparkles-text";
+import Particles from "@/components/magicui/particles";
+import MagicCard from "@/components/magicui/magic-card";
 import ShimmerButton from "@/components/magicui/shimmer-button";
 import fastfetchImg from '../../../assets/fastfetch.png';
 
@@ -13,7 +12,7 @@ const Home = () => {
     <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden bg-black selection:bg-purple-500/30">
       
       {/* Background */}
-      <Meteors number={30} />
+      <Particles className="absolute inset-0" quantity={80} ease={80} color="#ffffff" refresh />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-black to-black z-0 pointer-events-none" />
 
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -28,9 +27,11 @@ const Home = () => {
           </span>
         </div>
         
-        <div className="mb-6">
-          <SparklesText text="arch-server" colors={{ first: "#a855f7", second: "#3b82f6" }} />
-        </div>
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+          <AnimatedShinyText className="inline-flex items-center justify-center px-4 py-1 transition ease-out hover:text-neutral-300 hover:duration-300">
+            <span>arch-server</span>
+          </AnimatedShinyText>
+        </h1>
         
         <p className="text-lg md:text-xl text-neutral-400 max-w-2xl leading-relaxed mb-10">
           Headless Arch Linux deployment on repurposed hardware. Zero-trust web hosting,
@@ -44,7 +45,6 @@ const Home = () => {
             rel="noopener noreferrer"
             className="group relative inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white overflow-hidden"
           >
-            <BorderBeam size={60} duration={4} delay={1} />
             <Code className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" />
             View Source
           </a>
@@ -65,16 +65,21 @@ const Home = () => {
       </header>
 
       {/* ── Fastfetch Terminal ────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-4xl mb-16 rounded-xl overflow-hidden border border-white/10 shadow-[0_0_80px_-20px_rgba(168,85,247,0.15)] bg-black/60 backdrop-blur-xl">
-        <BorderBeam size={250} duration={12} delay={0} colorFrom="#a855f7" colorTo="#3b82f6" />
-        <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10 relative z-10">
-          <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-          <span className="mx-auto text-xs font-mono text-neutral-400">fastfetch — tanmay@puturdawaywaltuh</span>
+      <MagicCard 
+        className="z-10 w-full max-w-4xl mb-16 rounded-xl border border-white/10 shadow-[0_0_80px_-20px_rgba(168,85,247,0.15)] bg-black/60 backdrop-blur-xl p-0 h-auto"
+        spotlightColor="rgba(168,85,247,0.05)"
+        spotlightBorderColor="rgba(168,85,247,0.4)"
+      >
+        <div className="relative z-10 w-full">
+          <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10 relative z-10">
+            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+            <span className="mx-auto text-xs font-mono text-neutral-400">fastfetch — tanmay@puturdawaywaltuh</span>
+          </div>
+          <img src={fastfetchImg} alt="Arch Linux Fastfetch Output" className="w-full opacity-90 relative z-10 block" />
         </div>
-        <img src={fastfetchImg} alt="Arch Linux Fastfetch Output" className="w-full opacity-90 relative z-10" />
-      </div>
+      </MagicCard>
 
       {/* ── Bento Grid ───────────────────────────────────── */}
       <div className="z-10 w-full max-w-4xl relative">
