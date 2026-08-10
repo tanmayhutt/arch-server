@@ -213,11 +213,17 @@ For situations where you cannot install any software — a library computer, a f
 - **No client software required** — works on any device with a modern browser.
 
 **How to use:**
-1. Open **[https://ssh.tanmaytiwari.me](https://ssh.tanmaytiwari.me)** in any browser.
+1. Open **[https://ssh.tanmaytiwari.me](https://ssh.tanmaytiwari.me)** in a modern browser (Chrome, Safari, Firefox).
 2. Cloudflare Access will prompt for your email address.
 3. Enter the one-time PIN sent to that email.
-4. A terminal emulator renders in the browser — enter your server username.
+4. A terminal emulator renders in the browser — enter your server username (`tanmay`).
 5. Full interactive shell session, no downloads needed.
+
+> [!WARNING]
+> **Configuration Requirements:**
+> - The Cloudflare Tunnel service type must be set to `SSH` (not TCP/HTTP).
+> - **"Browser rendering"** must be explicitly toggled ON in the Cloudflare Access Application settings, with `SSH` selected in the dropdown.
+> - Access policies must ONLY use `Allow` (No `Bypass` or `Service Auth` actions allowed).
 
 #### Access Comparison
 

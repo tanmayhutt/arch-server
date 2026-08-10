@@ -1,179 +1,173 @@
+import { Code, Network, Shield, Server, Terminal, HardDrive, Wrench } from "lucide-react";
+import AnimatedShinyText from "@/components/magicui/animated-shiny-text";
+
 const ArchServer = () => {
   return (
-    <div className="animate-fade-in">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden">
 
       {/* ── Header ───────────────────────────────────────── */}
-      <header style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <span className="badge arch">module: arch-server</span>
-            <h1 style={{ marginTop: '1rem' }}>SERVER_ARCHITECTURE</h1>
-            <p style={{ marginBottom: 0 }}>Subsystem breakdown: networking, storage, remote access, telemetry.</p>
-          </div>
-          <a
-            href="https://github.com/tanmayhutt/arch-server"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="badge"
-            style={{ textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.82rem' }}
-          >
-            [view_source_code]
-          </a>
+      <header className="z-10 flex flex-col items-center text-center mb-16 w-full max-w-4xl">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-blue-500/40 bg-blue-500/10 text-blue-400">
+            module: arch-server
+          </span>
         </div>
+        
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-white">
+          SERVER_ARCHITECTURE
+        </h1>
+        <p className="text-lg text-neutral-400 max-w-2xl leading-relaxed mb-6">
+          Subsystem breakdown: networking, storage, remote access, telemetry.
+        </p>
+
+        <a
+          href="https://github.com/tanmayhutt/arch-server"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white"
+        >
+          <Code className="w-4 h-4" />
+          View Source Code
+        </a>
       </header>
 
-      {/* ── Net Topology ─────────────────────────────────── */}
-      <div className="server-panel delay-100">
-        <h2>/net_topology</h2>
-        <p>
-          Zero open ports on the physical router. All inbound access is brokered via outbound-only
-          encrypted tunnels. Three independent access paths are provisioned.
-        </p>
+      <div className="w-full max-w-4xl flex flex-col gap-6 z-10">
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
-          {/* Tailscale */}
-          <div style={{ padding: '1rem', borderLeft: '2px solid var(--accent-blue)', background: 'rgba(59,130,246,0.05)', borderRadius: '0 8px 8px 0' }}>
-            <p style={{ margin: '0 0 0.4rem', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-              Tailscale
-            </p>
-            <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>WireGuard mesh VPN. Trusted devices only.</p>
-            <pre style={{ margin: 0, fontSize: '0.78rem' }}><code>ssh user@&lt;tailscale-ip&gt;</code></pre>
+        {/* ── Net Topology ─────────────────────────────────── */}
+        <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+          <div className="flex items-center gap-3 mb-4 text-white">
+            <Network className="w-6 h-6 text-blue-400" />
+            <h2 className="text-2xl font-bold">/net_topology</h2>
           </div>
-
-          {/* Cloudflare SSH */}
-          <div style={{ padding: '1rem', borderLeft: '2px solid var(--accent-orange)', background: 'rgba(243,128,32,0.05)', borderRadius: '0 8px 8px 0' }}>
-            <p style={{ margin: '0 0 0.4rem', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-              Cloudflare Access SSH
-            </p>
-            <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>SSH over HTTPS. Email OTP + SSH key. Any device.</p>
-            <pre style={{ margin: 0, fontSize: '0.78rem' }}><code>ssh ssh.tanmaytiwari.me</code></pre>
-          </div>
-
-          {/* Browser SSH */}
-          <div style={{ padding: '1rem', borderLeft: '2px solid var(--accent-purple)', background: 'rgba(139,92,246,0.05)', borderRadius: '0 8px 8px 0' }}>
-            <p style={{ margin: '0 0 0.4rem', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-              Browser SSH
-            </p>
-            <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>Full terminal in the browser. Zero installs required.</p>
-            <pre style={{ margin: 0, fontSize: '0.78rem' }}><code>https://ssh.tanmaytiwari.me</code></pre>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Remote Access ─────────────────────────────────── */}
-      <div className="server-panel delay-150">
-        <h2>/remote_access</h2>
-        <p>
-          SSH is accessible from any device worldwide via Cloudflare Access — no Tailscale,
-          no open ports, no client software needed.
-        </p>
-
-        {/* Access Method 2: cloudflared CLI */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '0.82rem', color: 'var(--accent-orange)', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Method A — Native SSH (requires cloudflared CLI)
+          <p className="text-neutral-400 mb-6">
+            Zero open ports on the physical router. All inbound access is brokered via outbound-only encrypted tunnels. Three independent access paths are provisioned.
           </p>
-          <div style={{ padding: '1rem', borderLeft: '2px solid var(--accent-orange)', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 2 }}>
-            <p style={{ margin: 0 }}>1. Run: <code>ssh ssh.tanmaytiwari.me</code></p>
-            <p style={{ margin: 0 }}>2. Browser opens → Cloudflare Access identity check</p>
-            <p style={{ margin: 0 }}>3. One-time PIN sent to owner email</p>
-            <p style={{ margin: 0 }}>4. Token valid for 24h — next connections are instant</p>
-            <p style={{ margin: 0 }}>5. Shell access granted. No Tailscale. No open ports.</p>
-          </div>
-        </div>
 
-        {/* Access Method 3: Browser */}
-        <div>
-          <p style={{ fontSize: '0.82rem', color: 'var(--accent-purple)', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Method B — Browser Terminal (zero installs)
-          </p>
-          <div style={{ padding: '1rem', borderLeft: '2px solid var(--accent-purple)', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 2 }}>
-            <p style={{ margin: 0 }}>1. Open: <code><a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-purple)' }}>https://ssh.tanmaytiwari.me</a></code></p>
-            <p style={{ margin: 0 }}>2. Cloudflare Access → enter email → receive OTP</p>
-            <p style={{ margin: 0 }}>3. Full terminal renders in the browser tab</p>
-            <p style={{ margin: 0 }}>4. Enter server username → shell access granted</p>
-            <p style={{ margin: 0 }}>5. Works on any device: phone, tablet, library PC.</p>
-          </div>
-        </div>
-
-        {/* Comparison table */}
-        <div style={{ marginTop: '1.5rem', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', fontFamily: 'var(--font-mono)' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 500 }}></th>
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', color: 'var(--accent-blue)' }}>Tailscale</th>
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', color: 'var(--accent-orange)' }}>CF Access SSH</th>
-                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', color: 'var(--accent-purple)' }}>Browser SSH</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ['Needs Tailscale', '✅', '❌', '❌'],
-                ['Works any device', '❌', '✅', '✅'],
-                ['Zero installs', '❌', '❌', '✅'],
-                ['Zero open ports', '✅', '✅', '✅'],
-                ['Auth mechanism', 'Device trust', 'OTP + key', 'OTP'],
-                ['Audit logs', '❌', '✅', '✅'],
-              ].map(([label, ...vals]) => (
-                <tr key={label} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-secondary)' }}>{label}</td>
-                  {vals.map((v, i) => (
-                    <td key={i} style={{ padding: '0.6rem 0.75rem', textAlign: 'center', color: 'var(--text-primary)' }}>{v}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ── Storage ──────────────────────────────────────── */}
-      <div className="server-panel delay-200">
-        <h2>/storage_subsystem</h2>
-        <p>
-          Server Message Block (SMB) via Samba. Cross-platform file operations across the Tailscale mesh.
-          SMB daemon listens exclusively on the Tailscale interface — inaccessible from the public internet.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-          {[
-            ['macOS / iOS', 'smb://<tailscale-ip>'],
-            ['Windows', '\\\\<tailscale-ip>'],
-          ].map(([os, uri]) => (
-            <div key={os} style={{ padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>{os}</p>
-              <code style={{ fontSize: '0.82rem' }}>{uri}</code>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Tailscale */}
+            <div className="p-5 border-l-2 border-blue-500 bg-blue-500/5 rounded-r-xl">
+              <h3 className="text-lg font-semibold text-white mb-2">Tailscale</h3>
+              <p className="text-sm text-neutral-400 mb-3">WireGuard mesh VPN. Trusted devices only.</p>
+              <code className="px-2 py-1 bg-blue-500/10 text-blue-400 rounded-md text-xs font-mono">ssh user@&lt;tailscale-ip&gt;</code>
             </div>
-          ))}
+
+            {/* Cloudflare SSH */}
+            <div className="p-5 border-l-2 border-orange-500 bg-orange-500/5 rounded-r-xl">
+              <h3 className="text-lg font-semibold text-white mb-2">Cloudflare Access</h3>
+              <p className="text-sm text-neutral-400 mb-3">SSH over HTTPS. Email OTP + SSH key. Any device.</p>
+              <code className="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-md text-xs font-mono">ssh ssh.tanmaytiwari.me</code>
+            </div>
+
+            {/* Browser SSH */}
+            <div className="p-5 border-l-2 border-purple-500 bg-purple-500/5 rounded-r-xl">
+              <h3 className="text-lg font-semibold text-white mb-2">Browser SSH</h3>
+              <p className="text-sm text-neutral-400 mb-3">Full terminal in the browser. Zero installs required.</p>
+              <code className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md text-xs font-mono">https://ssh.tanmaytiwari.me</code>
+            </div>
+          </div>
         </div>
-        <pre><code>{`[ShareName]
+
+        {/* ── Remote Access ─────────────────────────────────── */}
+        <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+          <div className="flex items-center gap-3 mb-4 text-white">
+            <Shield className="w-6 h-6 text-orange-400" />
+            <h2 className="text-2xl font-bold">/remote_access</h2>
+          </div>
+          <p className="text-neutral-400 mb-8">
+            SSH is accessible from any device worldwide via Cloudflare Access — no Tailscale, no open ports, no client software needed.
+          </p>
+
+          <div className="mb-8">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-3">Method A — Native SSH (requires cloudflared CLI)</h3>
+            <div className="p-5 border-l-2 border-orange-500 text-sm text-neutral-400 leading-loose">
+              <p>1. Run: <code className="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-md text-xs font-mono">ssh ssh.tanmaytiwari.me</code></p>
+              <p>2. Browser opens → Cloudflare Access identity check</p>
+              <p>3. One-time PIN sent to owner email</p>
+              <p>4. Token valid for 24h — next connections are instant</p>
+              <p>5. Shell access granted. No Tailscale. No open ports.</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-purple-400 mb-3">Method B — Browser Terminal (zero installs)</h3>
+            <div className="p-5 border-l-2 border-purple-500 text-sm text-neutral-400 leading-loose">
+              <p>1. Open: <code className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md text-xs font-mono"><a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">https://ssh.tanmaytiwari.me</a></code></p>
+              <p>2. Cloudflare Access → enter email → receive OTP</p>
+              <p>3. Full terminal renders in the browser tab (Requires Chrome/Safari/Firefox)</p>
+              <p>4. Enter server username (e.g., <code className="px-1 py-0.5 bg-white/10 rounded">tanmay</code>) → shell access granted</p>
+              <p>5. Works on any device: phone, tablet, library PC.</p>
+              
+              <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                <p className="font-semibold text-purple-400 text-sm mb-2">⚠️ Configuration Requirements:</p>
+                <ul className="list-disc pl-5 text-sm">
+                  <li>Tunnel service type must be set to <code className="px-1 bg-white/10 rounded">SSH</code> (not TCP/HTTP).</li>
+                  <li><strong>"Browser rendering"</strong> must be enabled in the Access Application.</li>
+                  <li>Access Application policies must only use <strong>Allow</strong> (no Bypass/Service Auth).</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Storage ──────────────────────────────────────── */}
+        <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+          <div className="flex items-center gap-3 mb-4 text-white">
+            <HardDrive className="w-6 h-6 text-emerald-400" />
+            <h2 className="text-2xl font-bold">/storage_subsystem</h2>
+          </div>
+          <p className="text-neutral-400 mb-6">
+            Server Message Block (SMB) via Samba. Cross-platform file operations across the Tailscale mesh.
+            SMB daemon listens exclusively on the Tailscale interface — inaccessible from the public internet.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+              <p className="text-xs uppercase tracking-widest text-neutral-500 mb-1">macOS / iOS</p>
+              <code className="text-emerald-400 font-mono text-sm">smb://&lt;tailscale-ip&gt;</code>
+            </div>
+            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+              <p className="text-xs uppercase tracking-widest text-neutral-500 mb-1">Windows</p>
+              <code className="text-emerald-400 font-mono text-sm">\\\\&lt;tailscale-ip&gt;</code>
+            </div>
+          </div>
+
+          <pre className="p-4 bg-black/50 border border-white/10 rounded-xl text-neutral-300 font-mono text-sm overflow-x-auto">
+{`[ShareName]
    path = /home/<username>
    browsable = yes
-   writable = yes`}</code></pre>
-      </div>
-
-      {/* ── Admin Tools + Scripts ─────────────────────────── */}
-      <div className="grid-2 delay-300">
-        <div className="server-panel">
-          <h3>/admin_tools</h3>
-          <ul style={{ listStyle: 'none', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-            <li>— <strong style={{ color: 'var(--text-primary)' }}>wlctl</strong>: WLAN provisioning TUI</li>
-            <li>— <strong style={{ color: 'var(--text-primary)' }}>yazi</strong>: Async TUI file manager</li>
-            <li>— <strong style={{ color: 'var(--text-primary)' }}>KDE Connect</strong>: Telemetry &amp; payload drop</li>
-          </ul>
+   writable = yes`}
+          </pre>
         </div>
 
-        <div className="server-panel">
-          <h3>/utility_scripts</h3>
-          <ul style={{ listStyle: 'none', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-            <li>— <code>battery.sh</code> (Power)</li>
-            <li>— <code>network-status.sh</code> (WLAN state)</li>
-            <li>— <code>whatsong.sh</code> (Media state)</li>
-            <li>— <code>whoami.sh</code> (Session identity)</li>
-          </ul>
-        </div>
-      </div>
+        {/* ── Admin Tools + Scripts ─────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 text-white">
+              <Wrench className="w-5 h-5 text-neutral-400" />
+              <h3 className="text-lg font-bold">/admin_tools</h3>
+            </div>
+            <ul className="flex flex-col gap-3 text-neutral-400 text-sm">
+              <li>— <strong className="text-white">wlctl</strong>: WLAN provisioning TUI</li>
+              <li>— <strong className="text-white">yazi</strong>: Async TUI file manager</li>
+              <li>— <strong className="text-white">KDE Connect</strong>: Telemetry & payload drop</li>
+            </ul>
+          </div>
 
+          <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 text-white">
+              <Terminal className="w-5 h-5 text-neutral-400" />
+              <h3 className="text-lg font-bold">/utility_scripts</h3>
+            </div>
+            <ul className="flex flex-col gap-3 text-neutral-400 text-sm">
+              <li>— <code className="text-white bg-white/10 px-1 rounded">battery.sh</code> (Power)</li>
+              <li>— <code className="text-white bg-white/10 px-1 rounded">network-status.sh</code> (WLAN state)</li>
+              <li>— <code className="text-white bg-white/10 px-1 rounded">whatsong.sh</code> (Media state)</li>
+              <li>— <code className="text-white bg-white/10 px-1 rounded">whoami.sh</code> (Session identity)</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 };
