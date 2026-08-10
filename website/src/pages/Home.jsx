@@ -1,130 +1,159 @@
-import { Link } from 'react-router-dom';
-import { Server, Monitor, Shield, Box, Code, Terminal } from "lucide-react";
-import AnimatedShinyText from "@/components/magicui/animated-shiny-text";
-import { BentoCard, BentoGrid } from "@/components/magicui/bento-grid";
-import Particles from "@/components/magicui/particles";
-import MagicCard from "@/components/magicui/magic-card";
-import ShimmerButton from "@/components/magicui/shimmer-button";
-import fastfetchImg from '../../../assets/fastfetch.png';
+import { Link } from "react-router-dom";
+import {
+  ArrowUpRight,
+  Box,
+  Cloud,
+  Code2,
+  GitBranch,
+  HardDrive,
+  Network,
+  Server,
+  ShieldCheck,
+  Terminal,
+} from "lucide-react";
+import NetworkGlobe from "@/components/NetworkGlobe";
+import InfrastructureMap from "@/components/InfrastructureMap";
+import fastfetchImg from "../../../assets/fastfetch.png";
 
-const Home = () => {
-  return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden bg-black selection:bg-purple-500/30">
-      
-      {/* Background */}
-      <Particles className="absolute inset-0" quantity={80} ease={80} color="#ffffff" refresh />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-black to-black z-0 pointer-events-none" />
+const capabilities = [
+  {
+    number: "01",
+    icon: Cloud,
+    title: "Public edge",
+    label: "Cloudflare Tunnel",
+    description: "HTTPS reaches the machine through an outbound-only tunnel. The router exposes no inbound ports.",
+  },
+  {
+    number: "02",
+    icon: Network,
+    title: "Private control plane",
+    label: "Tailscale mesh",
+    description: "SSH, NAS traffic, and automated deployments stay inside an identity-bound WireGuard network.",
+  },
+  {
+    number: "03",
+    icon: Box,
+    title: "Isolated runtime",
+    label: "Docker Compose",
+    description: "Nginx and cloudflared run as constrained services with restart policies and privilege stripping.",
+  },
+  {
+    number: "04",
+    icon: GitBranch,
+    title: "Continuous delivery",
+    label: "GitHub Actions",
+    description: "A push to main securely reaches the node, rebuilds the frontend, and replaces the live container.",
+  },
+];
 
-      {/* ── Hero ─────────────────────────────────────────── */}
-      <header className="z-10 flex flex-col items-center text-center mb-16 w-full max-w-4xl">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-purple-500/30 bg-purple-500/10 text-purple-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
-            ONLINE
-          </span>
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-blue-500/30 bg-blue-500/10 text-blue-300">
-            arch linux x86_64
-          </span>
-        </div>
-        
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-          <AnimatedShinyText className="inline-flex items-center justify-center px-4 py-1 transition ease-out hover:text-neutral-300 hover:duration-300">
-            <span>arch-server</span>
-          </AnimatedShinyText>
-        </h1>
-        
-        <p className="text-lg md:text-xl text-neutral-400 max-w-2xl leading-relaxed mb-10">
-          Headless Arch Linux deployment on repurposed hardware. Zero-trust web hosting,
-          NAS, and global SSH — no open ports.
+const Home = () => (
+  <div className="site-page home-page">
+    <section className="hero-section page-width">
+      <div className="hero-copy">
+        <div className="eyebrow"><span className="live-dot" /> live from physical hardware</div>
+        <h1>A private edge,<br />built from an old laptop.</h1>
+        <p className="hero-lead">
+          A headless Arch Linux node operating as storage, deployment target, secure remote shell, and the origin serving this website.
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-6">
-          <a
-            href="https://github.com/tanmayhutt/arch-server"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white overflow-hidden"
-          >
-            <Code className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" />
-            View Source
-          </a>
-          
-          <a
-            href="https://ssh.tanmaytiwari.me"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ShimmerButton shimmerColor="#a855f7" background="rgba(255,255,255,0.03)" className="px-6 py-3">
-              <span className="flex items-center gap-2 text-sm font-medium text-white">
-                <Terminal className="w-4 h-4 text-purple-300" />
-                Browser SSH
-              </span>
-            </ShimmerButton>
+        <div className="hero-actions">
+          <Link to="/architecture" className="primary-action">
+            Trace the architecture <ArrowUpRight size={16} />
+          </Link>
+          <a href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noreferrer" className="secondary-action">
+            <Code2 size={16} /> View repository
           </a>
         </div>
-      </header>
 
-      {/* ── Fastfetch Terminal ────────────────────────────── */}
-      <MagicCard 
-        className="z-10 w-full max-w-4xl mb-16 rounded-xl border border-white/10 shadow-[0_0_80px_-20px_rgba(168,85,247,0.15)] bg-black/60 backdrop-blur-xl p-0 h-auto"
-        spotlightColor="rgba(168,85,247,0.05)"
-        spotlightBorderColor="rgba(168,85,247,0.4)"
-      >
-        <div className="relative z-10 w-full">
-          <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10 relative z-10">
-            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-            <span className="mx-auto text-xs font-mono text-neutral-400">fastfetch — tanmay@puturdawaywaltuh</span>
-          </div>
-          <img src={fastfetchImg} alt="Arch Linux Fastfetch Output" className="w-full opacity-90 relative z-10 block" />
-        </div>
-      </MagicCard>
-
-      {/* ── Bento Grid ───────────────────────────────────── */}
-      <div className="z-10 w-full max-w-4xl relative">
-        <BentoGrid className="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <BentoCard
-            name="/server_node"
-            description="Tailscale mesh, Samba NAS, Zero-Trust SSH. Three access methods, zero open ports."
-            Icon={Server}
-            href="/server"
-            cta="Read Docs"
-            className="col-span-1 md:col-span-2 shadow-[0_0_40px_-20px_rgba(59,130,246,0.1)] hover:shadow-[0_0_60px_-15px_rgba(59,130,246,0.2)] transition-shadow"
-            background={<div className="absolute inset-0 bg-neutral-950" />}
-          />
-          <BentoCard
-            name="/desktop_env"
-            description="Dormant Wayland compositor stack, custom dotfiles, and visual aesthetics via Hyprland."
-            Icon={Monitor}
-            href="/desktop"
-            cta="Read Docs"
-            className="col-span-1 shadow-[0_0_40px_-20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_60px_-15px_rgba(168,85,247,0.2)] transition-shadow"
-            background={<div className="absolute inset-0 bg-neutral-950" />}
-          />
-          <BentoCard
-            name="/security"
-            description="Zero exposure to the public internet. All ingress is brokered through outbound-only encrypted tunnels."
-            Icon={Shield}
-            href="/server"
-            cta="View Architecture"
-            className="col-span-1"
-            background={<div className="absolute inset-0 bg-neutral-950" />}
-          />
-          <BentoCard
-            name="/self_hosting"
-            description="Scalable homelab orchestrated via Docker Compose. Hardened containers with resource limits."
-            Icon={Box}
-            href="/server"
-            cta="Explore Stack"
-            className="col-span-1 md:col-span-2 shadow-[0_0_40px_-20px_rgba(14,165,233,0.1)] hover:shadow-[0_0_60px_-15px_rgba(14,165,233,0.2)] transition-shadow"
-            background={<div className="absolute inset-0 bg-neutral-950" />}
-          />
-        </BentoGrid>
+        <dl className="hero-metrics">
+          <div><dt>0</dt><dd>router ports open</dd></div>
+          <div><dt>2</dt><dd>isolated trust planes</dd></div>
+          <div><dt>1</dt><dd>physical origin node</dd></div>
+        </dl>
       </div>
-      
-    </div>
-  );
-};
+
+      <div className="globe-panel">
+        <div className="panel-chrome">
+          <span>GLOBAL INGRESS MAP</span>
+          <span className="panel-status"><i /> TELEMETRY ACTIVE</span>
+        </div>
+        <NetworkGlobe />
+        <div className="globe-readout">
+          <div><span>PUBLIC PATH</span><strong>Cloudflare Edge</strong></div>
+          <div><span>PRIVATE PATH</span><strong>WireGuard Mesh</strong></div>
+          <div><span>ORIGIN</span><strong>Arch Linux / India</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section className="transmission-band">
+      <div className="page-width transmission-inner">
+        <span className="transmission-label">CURRENT REQUEST PATH</span>
+        <div className="transmission-route" aria-label="Browser traffic route">
+          {[
+            ["01", "Browser"],
+            ["02", "Cloudflare edge"],
+            ["03", "Encrypted tunnel"],
+            ["04", "Nginx container"],
+          ].map(([number, label], index) => (
+            <div className="route-step" key={number}>
+              <span>{number}</span><strong>{label}</strong>
+              {index < 3 && <i aria-hidden="true" />}
+            </div>
+          ))}
+        </div>
+        <span className="transmission-state">TLS / HEALTHY</span>
+      </div>
+    </section>
+
+    <section className="section-block page-width">
+      <div className="section-heading">
+        <div><span className="section-index">01 / SYSTEM</span><h2>Infrastructure that explains itself.</h2></div>
+        <p>Move through the topology. Every animated route corresponds to a real boundary in the deployed system.</p>
+      </div>
+      <InfrastructureMap />
+    </section>
+
+    <section className="section-block page-width">
+      <div className="section-heading">
+        <div><span className="section-index">02 / CAPABILITIES</span><h2>Small node. Deliberate architecture.</h2></div>
+        <p>The machine is modest. The network model is not. Each layer has one clear responsibility and one controlled path in.</p>
+      </div>
+      <div className="capability-grid">
+        {capabilities.map(({ number, icon: Icon, title, label, description }) => (
+          <article className="capability-card" key={number}>
+            <div className="capability-top"><span>{number}</span><Icon size={20} strokeWidth={1.5} /></div>
+            <h3>{title}</h3>
+            <p className="capability-label">{label}</p>
+            <p>{description}</p>
+            <div className="card-scanline" />
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section className="section-block page-width evidence-grid">
+      <div className="evidence-copy">
+        <span className="section-index">03 / ORIGIN</span>
+        <h2>The page is served by the machine it documents.</h2>
+        <p>
+          This is not a cloud mock-up. The React bundle is built into an Nginx container on a repurposed Lenovo IdeaPad, then exposed through Cloudflare without opening the home router.
+        </p>
+        <div className="hardware-list">
+          <div><Server size={18} /><span><small>HOST</small>Lenovo IdeaPad 3</span></div>
+          <div><HardDrive size={18} /><span><small>STORAGE</small>233 GiB ext4 SSD</span></div>
+          <div><ShieldCheck size={18} /><span><small>INGRESS</small>Zero-trust only</span></div>
+          <div><Terminal size={18} /><span><small>ADMIN</small>SSH + browser shell</span></div>
+        </div>
+        <Link to="/server" className="text-link">Inspect the server subsystems <ArrowUpRight size={15} /></Link>
+      </div>
+      <div className="terminal-evidence">
+        <div className="panel-chrome"><span>ORIGIN EVIDENCE</span><span>fastfetch.capture</span></div>
+        <img src={fastfetchImg} alt="Fastfetch output from the physical Arch Linux server" />
+        <div className="terminal-foot"><span>captured on origin</span><span>arch linux x86_64</span></div>
+      </div>
+    </section>
+  </div>
+);
 
 export default Home;

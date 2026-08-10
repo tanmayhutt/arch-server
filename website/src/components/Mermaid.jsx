@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import mermaid from 'mermaid';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { ScanSearch } from 'lucide-react';
 
 mermaid.initialize({
   startOnLoad: true,
@@ -60,7 +61,9 @@ const Mermaid = ({ chart }) => {
           color: 'var(--text-secondary)',
         }}
       >
-        🔍 Scroll to zoom, drag to pan
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <ScanSearch size={13} /> Scroll to zoom, drag to pan
+        </span>
       </div>
 
       {svgContent ? (

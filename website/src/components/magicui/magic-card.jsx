@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const MagicCard = ({
@@ -48,7 +48,7 @@ export const MagicCard = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        "relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl",
+        "relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#080b0d]/90 backdrop-blur-xl",
         className
       )}
       {...props}
