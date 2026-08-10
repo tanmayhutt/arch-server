@@ -7,23 +7,23 @@ import fastfetchImg from '../../../assets/fastfetch.png';
 
 const Home = () => {
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden bg-black selection:bg-white/30">
       <RetroGrid />
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <header className="z-10 flex flex-col items-center text-center mb-16 w-full max-w-4xl">
         <div className="flex items-center gap-3 mb-6">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-neutral-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
             ONLINE
           </span>
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-blue-500/30 bg-blue-500/10 text-blue-400">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-neutral-300">
             arch linux x86_64
           </span>
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-          <AnimatedShinyText className="inline-flex items-center justify-center px-4 py-1 transition ease-out hover:text-neutral-600 hover:duration-300 hover:dark:text-neutral-400">
+          <AnimatedShinyText className="inline-flex items-center justify-center px-4 py-1 transition ease-out hover:text-neutral-300 hover:duration-300">
             <span>arch-server</span>
           </AnimatedShinyText>
         </h1>
@@ -47,7 +47,7 @@ const Home = () => {
             href="https://ssh.tanmaytiwari.me"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium border border-white/20 bg-white/10 hover:bg-white/20 text-white transition-colors"
           >
             <Terminal className="w-4 h-4" />
             Browser SSH
@@ -56,14 +56,14 @@ const Home = () => {
       </header>
 
       {/* ── Fastfetch Terminal ────────────────────────────── */}
-      <div className="z-10 w-full max-w-4xl mb-16 rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/60 backdrop-blur-xl">
+      <div className="z-10 w-full max-w-4xl mb-16 rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black/80 backdrop-blur-xl">
         <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-          <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-          <span className="mx-auto text-xs font-mono text-neutral-400">fastfetch — tanmay@puturdawaywaltuh</span>
+          <div className="w-3 h-3 rounded-full bg-neutral-600"></div>
+          <div className="w-3 h-3 rounded-full bg-neutral-600"></div>
+          <div className="w-3 h-3 rounded-full bg-neutral-600"></div>
+          <span className="mx-auto text-xs font-mono text-neutral-500">fastfetch — tanmay@puturdawaywaltuh</span>
         </div>
-        <img src={fastfetchImg} alt="Arch Linux Fastfetch Output" className="w-full opacity-90 hover:opacity-100 transition-opacity" />
+        <img src={fastfetchImg} alt="Arch Linux Fastfetch Output" className="w-full opacity-70 hover:opacity-100 transition-opacity grayscale hover:grayscale-0" />
       </div>
 
       {/* ── Bento Grid ───────────────────────────────────── */}
@@ -76,7 +76,7 @@ const Home = () => {
             href="/server"
             cta="Read Docs"
             className="col-span-1 md:col-span-2"
-            background={<div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />}
+            background={<div className="absolute inset-0 bg-neutral-950" />}
           />
           <BentoCard
             name="/desktop_env"
@@ -85,7 +85,7 @@ const Home = () => {
             href="/desktop"
             cta="Read Docs"
             className="col-span-1"
-            background={<div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />}
+            background={<div className="absolute inset-0 bg-neutral-950" />}
           />
           <BentoCard
             name="/security"
@@ -94,7 +94,7 @@ const Home = () => {
             href="/server"
             cta="View Architecture"
             className="col-span-1"
-            background={<div className="absolute inset-0 bg-gradient-to-bl from-purple-500/10 to-transparent" />}
+            background={<div className="absolute inset-0 bg-neutral-950" />}
           />
           <BentoCard
             name="/self_hosting"
@@ -103,7 +103,7 @@ const Home = () => {
             href="/server"
             cta="Explore Stack"
             className="col-span-1 md:col-span-2"
-            background={<div className="absolute inset-0 bg-gradient-to-tr from-orange-500/10 to-transparent" />}
+            background={<div className="absolute inset-0 bg-neutral-950" />}
           />
         </BentoGrid>
       </div>

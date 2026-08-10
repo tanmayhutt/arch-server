@@ -3,12 +3,12 @@ import AnimatedShinyText from "@/components/magicui/animated-shiny-text";
 
 const ArchServer = () => {
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-start pt-20 pb-24 px-6 overflow-hidden bg-black selection:bg-white/30">
 
       {/* ── Header ───────────────────────────────────────── */}
       <header className="z-10 flex flex-col items-center text-center mb-16 w-full max-w-4xl">
         <div className="flex items-center gap-3 mb-6">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-blue-500/40 bg-blue-500/10 text-blue-400">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-neutral-300">
             module: arch-server
           </span>
         </div>
@@ -34,9 +34,9 @@ const ArchServer = () => {
       <div className="w-full max-w-4xl flex flex-col gap-6 z-10">
 
         {/* ── Net Topology ─────────────────────────────────── */}
-        <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+        <div className="p-8 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl">
           <div className="flex items-center gap-3 mb-4 text-white">
-            <Network className="w-6 h-6 text-blue-400" />
+            <Network className="w-6 h-6 text-neutral-300" />
             <h2 className="text-2xl font-bold">/net_topology</h2>
           </div>
           <p className="text-neutral-400 mb-6">
@@ -45,32 +45,32 @@ const ArchServer = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Tailscale */}
-            <div className="p-5 border-l-2 border-blue-500 bg-blue-500/5 rounded-r-xl">
+            <div className="p-5 border-l-2 border-neutral-600 bg-white/5 rounded-r-xl">
               <h3 className="text-lg font-semibold text-white mb-2">Tailscale</h3>
               <p className="text-sm text-neutral-400 mb-3">WireGuard mesh VPN. Trusted devices only.</p>
-              <code className="px-2 py-1 bg-blue-500/10 text-blue-400 rounded-md text-xs font-mono">ssh user@&lt;tailscale-ip&gt;</code>
+              <code className="px-2 py-1 bg-white/10 text-neutral-300 rounded-md text-xs font-mono">ssh user@&lt;tailscale-ip&gt;</code>
             </div>
 
             {/* Cloudflare SSH */}
-            <div className="p-5 border-l-2 border-orange-500 bg-orange-500/5 rounded-r-xl">
+            <div className="p-5 border-l-2 border-neutral-600 bg-white/5 rounded-r-xl">
               <h3 className="text-lg font-semibold text-white mb-2">Cloudflare Access</h3>
               <p className="text-sm text-neutral-400 mb-3">SSH over HTTPS. Email OTP + SSH key. Any device.</p>
-              <code className="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-md text-xs font-mono">ssh ssh.tanmaytiwari.me</code>
+              <code className="px-2 py-1 bg-white/10 text-neutral-300 rounded-md text-xs font-mono">ssh ssh.tanmaytiwari.me</code>
             </div>
 
             {/* Browser SSH */}
-            <div className="p-5 border-l-2 border-purple-500 bg-purple-500/5 rounded-r-xl">
+            <div className="p-5 border-l-2 border-neutral-600 bg-white/5 rounded-r-xl">
               <h3 className="text-lg font-semibold text-white mb-2">Browser SSH</h3>
               <p className="text-sm text-neutral-400 mb-3">Full terminal in the browser. Zero installs required.</p>
-              <code className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md text-xs font-mono">https://ssh.tanmaytiwari.me</code>
+              <code className="px-2 py-1 bg-white/10 text-neutral-300 rounded-md text-xs font-mono">https://ssh.tanmaytiwari.me</code>
             </div>
           </div>
         </div>
 
         {/* ── Remote Access ─────────────────────────────────── */}
-        <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+        <div className="p-8 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl">
           <div className="flex items-center gap-3 mb-4 text-white">
-            <Shield className="w-6 h-6 text-orange-400" />
+            <Shield className="w-6 h-6 text-neutral-300" />
             <h2 className="text-2xl font-bold">/remote_access</h2>
           </div>
           <p className="text-neutral-400 mb-8">
@@ -78,9 +78,9 @@ const ArchServer = () => {
           </p>
 
           <div className="mb-8">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-3">Method A — Native SSH (requires cloudflared CLI)</h3>
-            <div className="p-5 border-l-2 border-orange-500 text-sm text-neutral-400 leading-loose">
-              <p>1. Run: <code className="px-2 py-1 bg-orange-500/10 text-orange-400 rounded-md text-xs font-mono">ssh ssh.tanmaytiwari.me</code></p>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">Method A — Native SSH (requires cloudflared CLI)</h3>
+            <div className="p-5 border-l-2 border-neutral-600 text-sm text-neutral-400 leading-loose">
+              <p>1. Run: <code className="px-2 py-1 bg-white/10 text-neutral-300 rounded-md text-xs font-mono">ssh ssh.tanmaytiwari.me</code></p>
               <p>2. Browser opens → Cloudflare Access identity check</p>
               <p>3. One-time PIN sent to owner email</p>
               <p>4. Token valid for 24h — next connections are instant</p>
@@ -89,18 +89,18 @@ const ArchServer = () => {
           </div>
 
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-purple-400 mb-3">Method B — Browser Terminal (zero installs)</h3>
-            <div className="p-5 border-l-2 border-purple-500 text-sm text-neutral-400 leading-loose">
-              <p>1. Open: <code className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md text-xs font-mono"><a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">https://ssh.tanmaytiwari.me</a></code></p>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">Method B — Browser Terminal (zero installs)</h3>
+            <div className="p-5 border-l-2 border-neutral-600 text-sm text-neutral-400 leading-loose">
+              <p>1. Open: <code className="px-2 py-1 bg-white/10 text-neutral-300 rounded-md text-xs font-mono"><a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-white">https://ssh.tanmaytiwari.me</a></code></p>
               <p>2. Cloudflare Access → enter email → receive OTP</p>
               <p>3. Full terminal renders in the browser tab (Requires Chrome/Safari/Firefox)</p>
-              <p>4. Enter server username (e.g., <code className="px-1 py-0.5 bg-white/10 rounded">tanmay</code>) → shell access granted</p>
+              <p>4. Enter server username (e.g., <code className="px-1 py-0.5 bg-white/10 rounded text-neutral-300">tanmay</code>) → shell access granted</p>
               <p>5. Works on any device: phone, tablet, library PC.</p>
               
-              <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                <p className="font-semibold text-purple-400 text-sm mb-2">⚠️ Configuration Requirements:</p>
+              <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg">
+                <p className="font-semibold text-neutral-300 text-sm mb-2">⚠️ Configuration Requirements:</p>
                 <ul className="list-disc pl-5 text-sm">
-                  <li>Tunnel service type must be set to <code className="px-1 bg-white/10 rounded">SSH</code> (not TCP/HTTP).</li>
+                  <li>Tunnel service type must be set to <code className="px-1 bg-white/10 rounded text-neutral-300">SSH</code> (not TCP/HTTP).</li>
                   <li><strong>"Browser rendering"</strong> must be enabled in the Access Application.</li>
                   <li>Access Application policies must only use <strong>Allow</strong> (no Bypass/Service Auth).</li>
                 </ul>
@@ -110,9 +110,9 @@ const ArchServer = () => {
         </div>
 
         {/* ── Storage ──────────────────────────────────────── */}
-        <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+        <div className="p-8 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl">
           <div className="flex items-center gap-3 mb-4 text-white">
-            <HardDrive className="w-6 h-6 text-emerald-400" />
+            <HardDrive className="w-6 h-6 text-neutral-300" />
             <h2 className="text-2xl font-bold">/storage_subsystem</h2>
           </div>
           <p className="text-neutral-400 mb-6">
@@ -123,11 +123,11 @@ const ArchServer = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
               <p className="text-xs uppercase tracking-widest text-neutral-500 mb-1">macOS / iOS</p>
-              <code className="text-emerald-400 font-mono text-sm">smb://&lt;tailscale-ip&gt;</code>
+              <code className="text-neutral-300 font-mono text-sm">smb://&lt;tailscale-ip&gt;</code>
             </div>
             <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
               <p className="text-xs uppercase tracking-widest text-neutral-500 mb-1">Windows</p>
-              <code className="text-emerald-400 font-mono text-sm">\\\\&lt;tailscale-ip&gt;</code>
+              <code className="text-neutral-300 font-mono text-sm">\\\\&lt;tailscale-ip&gt;</code>
             </div>
           </div>
 
@@ -141,9 +141,9 @@ const ArchServer = () => {
 
         {/* ── Admin Tools + Scripts ─────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+          <div className="p-8 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl">
             <div className="flex items-center gap-3 mb-4 text-white">
-              <Wrench className="w-5 h-5 text-neutral-400" />
+              <Wrench className="w-5 h-5 text-neutral-300" />
               <h3 className="text-lg font-bold">/admin_tools</h3>
             </div>
             <ul className="flex flex-col gap-3 text-neutral-400 text-sm">
@@ -153,9 +153,9 @@ const ArchServer = () => {
             </ul>
           </div>
 
-          <div className="p-8 rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl shadow-2xl">
+          <div className="p-8 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl">
             <div className="flex items-center gap-3 mb-4 text-white">
-              <Terminal className="w-5 h-5 text-neutral-400" />
+              <Terminal className="w-5 h-5 text-neutral-300" />
               <h3 className="text-lg font-bold">/utility_scripts</h3>
             </div>
             <ul className="flex flex-col gap-3 text-neutral-400 text-sm">
