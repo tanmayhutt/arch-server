@@ -10,23 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "framer-motion": "^13.1.0",
     "jsdom": "^30.0.1",
     "lucide-react": "^1.28.0",
     "mermaid": "^10.9.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
-    "react-zoom-pan-pinch": "^4.0.4",
-    "tailwind-merge": "^3.6.0"
+    "react-zoom-pan-pinch": "^4.0.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "autoprefixer": "^10.5.4",
-    "magicui-cli": "^0.1.6",
     "oxlint": "^1.75.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.19",

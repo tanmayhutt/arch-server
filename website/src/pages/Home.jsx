@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -14,7 +13,6 @@ import {
 } from "lucide-react";
 import NetworkGlobe from "@/components/NetworkGlobe";
 import InfrastructureMap from "@/components/InfrastructureMap";
-import MagicCard from "@/components/magicui/magic-card";
 import fastfetchImg from "../../../assets/fastfetch-sanitized.jpg";
 
 const capabilities = [
@@ -48,18 +46,10 @@ const capabilities = [
   },
 ];
 
-const Home = () => {
-  const shouldReduceMotion = useReducedMotion();
-  const entrance = (delay = 0) => (shouldReduceMotion ? {} : {
-    initial: { opacity: 0, y: 14 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.52, delay, ease: [0.22, 1, 0.36, 1] },
-  });
-
-  return (
+const Home = () => (
     <div className="site-page home-page">
       <section className="hero-section page-width">
-        <motion.div className="hero-copy" {...entrance()}>
+        <div className="hero-copy">
           <div className="eyebrow"><span className="live-dot" /> served by physical hardware</div>
           <h1>A private edge,<br />built from an old laptop.</h1>
           <p className="hero-lead">
@@ -80,20 +70,20 @@ const Home = () => {
             <div><dt>2</dt><dd>isolated trust planes</dd></div>
             <div><dt>1</dt><dd>physical origin node</dd></div>
           </dl>
-        </motion.div>
+        </div>
 
-        <motion.div className="globe-panel" {...entrance(0.08)}>
+        <div className="globe-panel">
           <div className="panel-chrome">
-            <span>INTERACTIVE ROUTE MODEL</span>
-            <span className="panel-status"><i /> LOCAL CANVAS / INTERACTIVE</span>
+            <span>NETWORK ROUTES</span>
+            <span>ROTATABLE MODEL</span>
           </div>
           <NetworkGlobe />
           <div className="globe-readout">
             <div><span>PUBLIC PATH</span><strong>Cloudflare Edge</strong></div>
             <div><span>PRIVATE PATH</span><strong>WireGuard Mesh</strong></div>
-            <div><span>ORIGIN</span><strong>Arch Linux / Physical node</strong></div>
+            <div><span>ORIGIN</span><strong>Lenovo IdeaPad 3</strong></div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       <section className="transmission-band">
@@ -119,7 +109,7 @@ const Home = () => {
       <section className="section-block page-width">
         <div className="section-heading">
           <div><span className="section-index">01 / SYSTEM</span><h2>How this request reaches my Lenovo.</h2></div>
-          <p>Move through the topology. Every animated route corresponds to a real boundary in the deployed system.</p>
+          <p>The diagram separates public delivery, private administration, and deployment into their actual boundaries.</p>
         </div>
         <InfrastructureMap />
       </section>
@@ -131,20 +121,12 @@ const Home = () => {
         </div>
         <div className="capability-grid">
           {capabilities.map(({ number, icon: Icon, title, label, description }) => (
-            <MagicCard
-              as="article"
-              className="capability-card"
-              key={number}
-              size={380}
-              spotlightColor="rgba(76, 180, 221, 0.045)"
-              spotlightBorderColor="rgba(139, 210, 237, 0.13)"
-            >
+            <article className="capability-card" key={number}>
               <div className="capability-top"><span>{number}</span><Icon size={20} strokeWidth={1.5} /></div>
               <h3>{title}</h3>
               <p className="capability-label">{label}</p>
               <p>{description}</p>
-              <div className="card-scanline" />
-            </MagicCard>
+            </article>
           ))}
         </div>
       </section>
@@ -171,7 +153,6 @@ const Home = () => {
         </div>
       </section>
     </div>
-  );
-};
+);
 
 export default Home;

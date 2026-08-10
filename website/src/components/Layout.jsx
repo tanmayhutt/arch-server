@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useLayoutEffect } from "react";
 import { Code2, Server } from "lucide-react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 
@@ -11,7 +11,10 @@ const navItems = [
 
 const Layout = () => {
   const { pathname } = useLocation();
-  const shouldReduceMotion = useReducedMotion();
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <div className="app-shell">
@@ -35,17 +38,9 @@ const Layout = () => {
       </div>
     </nav>
 
-    <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
-      <motion.main
-        key={pathname}
-        initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -5 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: "easeOut" }}
-      >
-        <Outlet />
-      </motion.main>
-    </AnimatePresence>
+    <main>
+      <Outlet />
+    </main>
 
     <footer className="site-footer">
       <div className="page-width footer-inner">
