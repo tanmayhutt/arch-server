@@ -4,30 +4,21 @@ const Layout = () => {
   return (
     <div className="layout-container">
       <nav className="navbar animate-fade-in">
-        <Link to="/" className="logo" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link to="/" className="logo">
           <span className="logo-icon">~/</span>arch-server
         </Link>
         <div className="nav-links">
-          <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             /home
           </NavLink>
-          <NavLink
-            to="/server"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-          >
+          <NavLink to="/server" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             /server_node
           </NavLink>
-          <NavLink
-            to="/desktop"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-          >
+          <NavLink to="/desktop" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             /desktop_env
           </NavLink>
-          <NavLink
-            to="/architecture"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-          >
-            /system_architecture
+          <NavLink to="/architecture" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            /architecture
           </NavLink>
         </div>
       </nav>
@@ -36,26 +27,14 @@ const Layout = () => {
         <Outlet />
       </main>
 
-      <footer
-        style={{
-          marginTop: '5rem',
-          padding: '2rem 1rem',
-          textAlign: 'center',
-          borderTop: '1px solid var(--border-color)',
-          color: 'var(--text-secondary)',
-          fontSize: '0.85rem',
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: 'var(--border-radius)',
-        }}
-      >
-        <p style={{ marginBottom: '0.5rem', color: 'var(--text-primary)', fontWeight: 'bold' }}>
-          LIVE DEMO: SELF-HOSTED INFRASTRUCTURE
+      <footer className="footer">
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
+          LIVE · SELF-HOSTED INFRASTRUCTURE
         </p>
-        <p style={{ marginBottom: '0' }}>
-          You are currently viewing a production React website served directly from a repurposed{' '}
-          <strong>Lenovo IdeaPad</strong> sitting in a home network.
-          <br />
-          Powered by Arch Linux, Docker Containers, and Cloudflare Zero Trust Tunnels.
+        <p style={{ marginBottom: 0, fontSize: '0.8rem' }}>
+          You are viewing a production website served from a{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>Lenovo IdeaPad</strong> in a home network. <br />
+          Arch Linux · Docker · Cloudflare Zero Trust
         </p>
       </footer>
     </div>

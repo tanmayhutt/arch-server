@@ -202,15 +202,33 @@ ssh ssh.tanmaytiwari.me
 # Repeat within 8h session: instant connect
 ```
 
+---
+
+### Method 3: Browser-Based SSH (Zero Installs)
+
+For situations where you cannot install any software — a library computer, a friend's phone, a school tablet. A full terminal is rendered directly inside a web browser tab.
+
+**Security model:**
+- **Email OTP** — Cloudflare Access gates access with a one-time PIN.
+- **No client software required** — works on any device with a modern browser.
+
+**How to use:**
+1. Open **[https://ssh.tanmaytiwari.me](https://ssh.tanmaytiwari.me)** in any browser.
+2. Cloudflare Access will prompt for your email address.
+3. Enter the one-time PIN sent to that email.
+4. A terminal emulator renders in the browser — enter your server username.
+5. Full interactive shell session, no downloads needed.
+
 #### Access Comparison
 
-| | Tailscale SSH | Cloudflare Access SSH |
-|---|---|---|
-| Requires Tailscale | YES | No |
-| Works from any device | No | **YES** |
-| Zero open ports | YES | **YES** |
-| Auth mechanism | Device trust | **Email OTP + SSH key** |
-| Audit logs | No | **YES (Cloudflare dashboard)** |
+| | Tailscale SSH | Cloudflare Access SSH | Browser SSH |
+|---|---|---|---|
+| Requires Tailscale | YES | No | No |
+| Works from any device | No | **YES** | **YES** |
+| Requires client install | YES (Tailscale) | YES (cloudflared) | **No** |
+| Zero open ports | YES | **YES** | **YES** |
+| Auth mechanism | Device trust | OTP + SSH key | **OTP only** |
+| Audit logs | No | **YES** | **YES** |
 
 ---
 
