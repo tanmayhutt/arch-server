@@ -13,6 +13,7 @@ import {
   Terminal,
   Wrench,
 } from "lucide-react";
+import MagicCard from "@/components/magicui/magic-card";
 
 const accessMethods = [
   {
@@ -107,10 +108,17 @@ const ArchServer = () => (
       </div>
       <div className="access-method-grid">
         {accessMethods.map(({ index, icon: Icon, title, label, description, command, tone }) => (
-          <article className={`access-method method-${tone}`} key={index}>
+          <MagicCard
+            as="article"
+            className={`access-method method-${tone}`}
+            key={index}
+            size={430}
+            spotlightColor="rgba(76, 180, 221, 0.04)"
+            spotlightBorderColor="rgba(139, 210, 237, 0.12)"
+          >
             <div className="access-method-top"><span>{index}</span><Icon size={20} strokeWidth={1.5} /></div>
             <h3>{title}</h3><small>{label}</small><p>{description}</p><code>{command}</code>
-          </article>
+          </MagicCard>
         ))}
       </div>
     </section>
