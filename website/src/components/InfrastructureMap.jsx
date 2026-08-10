@@ -1,8 +1,16 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
 const InfrastructureMap = () => {
   const mapRef = useRef(null);
+  const updateFrameRef = useRef(null);
+  const pointerTargetRef = useRef({ x: 0, y: 0 });
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const shouldReduceMotion = useReducedMotion();
+
+  useEffect(() => () => {
+    if (updateFrameRef.current !== null) window.cancelAnimationFrame(updateFrameRef.current);
+  }, []);
 
   const paths = useMemo(() => {
     const bendX = pointer.x * 22;
@@ -13,18 +21,34 @@ const InfrastructureMap = () => {
       publicC: `M 746 112 C ${824 + bendX} ${112 + bendY}, ${835 + bendX} ${200 + bendY}, 866 246`,
       privateA: `M 92 386 C ${188 - bendX} ${442 - bendY}, ${245 - bendX} ${442 - bendY}, 330 386`,
       privateB: `M 430 386 C ${595 - bendX} ${386 - bendY}, ${706 - bendX} ${346 - bendY}, 866 275`,
-      deploy: `M 378 250 C ${450 + bendX} ${302 + bendY}, ${540 + bendX} ${326 + bendY}, 646 386`,
-      deployB: `M 746 386 C ${810 - bendX} ${374 - bendY}, ${840 - bendX} ${324 - bendY}, 866 282`,
+      deploy: `M 378 280 C ${382 + bendX} ${314 + bendY}, ${382 + bendX} ${336 + bendY}, 380 356`,
+      deployB: `M 430 386 C ${500 + bendX} ${372 + bendY}, ${572 + bendX} ${372 + bendY}, 646 386`,
+      deployC: `M 746 386 C ${810 - bendX} ${374 - bendY}, ${840 - bendX} ${324 - bendY}, 866 282`,
     };
   }, [pointer]);
 
   const handlePointerMove = (event) => {
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     const rect = mapRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPointer({
+    pointerTargetRef.current = {
       x: ((event.clientX - rect.left) / rect.width - 0.5) * 2,
       y: ((event.clientY - rect.top) / rect.height - 0.5) * 2,
+    };
+    if (updateFrameRef.current !== null) return;
+    updateFrameRef.current = window.requestAnimationFrame(() => {
+      setPointer(pointerTargetRef.current);
+      updateFrameRef.current = null;
     });
+  };
+
+  const handlePointerLeave = () => {
+    if (updateFrameRef.current !== null) {
+      window.cancelAnimationFrame(updateFrameRef.current);
+      updateFrameRef.current = null;
+    }
+    pointerTargetRef.current = { x: 0, y: 0 };
+    setPointer({ x: 0, y: 0 });
   };
 
   return (
@@ -32,7 +56,7 @@ const InfrastructureMap = () => {
       ref={mapRef}
       className="infrastructure-map"
       onPointerMove={handlePointerMove}
-      onPointerLeave={() => setPointer({ x: 0, y: 0 })}
+      onPointerLeave={handlePointerLeave}
     >
       <svg viewBox="0 0 1000 500" role="img" aria-labelledby="map-title map-description">
         <title id="map-title">Interactive arch-server network architecture</title>
@@ -59,9 +83,9 @@ const InfrastructureMap = () => {
           {Object.entries(paths).slice(0, 3).map(([key, path], index) => (
             <g key={key}>
               <path id={key} d={path} />
-              <circle r="3" filter="url(#route-glow)">
+              {!shouldReduceMotion && <circle r="3" filter="url(#route-glow)">
                 <animateMotion dur={`${2.8 + index * 0.45}s`} repeatCount="indefinite" path={path} />
-              </circle>
+              </circle>}
             </g>
           ))}
         </g>
@@ -70,18 +94,18 @@ const InfrastructureMap = () => {
           {[paths.privateA, paths.privateB].map((path, index) => (
             <g key={`private-${index}`}>
               <path d={path} />
-              <circle r="3" filter="url(#route-glow)">
+              {!shouldReduceMotion && <circle r="3" filter="url(#route-glow)">
                 <animateMotion dur={`${3.2 + index * 0.5}s`} repeatCount="indefinite" path={path} />
-              </circle>
+              </circle>}
             </g>
           ))}
         </g>
 
         <g className="route route-deploy">
-          {[paths.deploy, paths.deployB].map((path, index) => (
+          {[paths.deploy, paths.deployB, paths.deployC].map((path, index) => (
             <g key={`deploy-${index}`}>
               <path d={path} />
-              <circle r="2.5"><animateMotion dur={`${3.6 + index * 0.4}s`} repeatCount="indefinite" path={path} /></circle>
+              {!shouldReduceMotion && <circle r="2.5"><animateMotion dur={`${3.6 + index * 0.4}s`} repeatCount="indefinite" path={path} /></circle>}
             </g>
           ))}
         </g>
@@ -112,7 +136,7 @@ const InfrastructureMap = () => {
         </g>
         <g className="map-node map-node-deploy" transform="translate(646 356)">
           <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">COMPOSE</text><text x="14" y="43" className="map-node-detail">rebuild stack</text>
+          <text x="14" y="25">COMPOSE</text><text x="14" y="43" className="map-node-detail">SSH / rebuild</text>
         </g>
 
         <g className="host-node" transform="translate(850 188)">

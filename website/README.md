@@ -1,16 +1,27 @@
-# React + Vite
+# arch-server website
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React and Vite documentation frontend for the physical Arch Linux node.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm ci
+npm run dev
+```
 
-## React Compiler
+## Validation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run lint
+npm run build
+```
 
-## Expanding the Oxlint configuration
+## Design constraints
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- Infrastructure diagrams must reflect the deployed trust boundaries.
+- Static labels must not imply live telemetry.
+- Public copy and media must omit private endpoints, identities, and local network details.
+- Motion must honor `prefers-reduced-motion` and pause when offscreen where practical.
+- Decorative effects should remain secondary to the physical server, access model, and deployment flow.
+
+The production image is built by the root Docker Compose stack and served through Nginx behind an outbound Cloudflare Tunnel.

@@ -1,5 +1,5 @@
 import { ArrowDown, Cloud, Container, GitBranch, LockKeyhole, Network, Server } from "lucide-react";
-import InfrastructureMap from "@/components/InfrastructureMap";
+import DetailedArchitectureMap from "@/components/DetailedArchitectureMap";
 
 const planes = [
   {
@@ -32,17 +32,17 @@ const Architecture = () => (
       <div className="page-header-grid">
         <h1>Two trust planes.<br />One physical origin.</h1>
         <p>
-          Public delivery and private administration never share an exposed entry point. Both routes are brokered by outbound, identity-aware networks before touching the host.
+          Public delivery and private administration never share an exposed entry point. Outbound tunnels and identity-aware private routes mediate every path toward the host.
         </p>
       </div>
     </header>
 
     <section className="page-width architecture-map-section">
       <div className="panel-chrome">
-        <span>LIVE LOGICAL TOPOLOGY</span>
-        <span className="panel-status"><i /> ROUTES NOMINAL</span>
+        <span>LOSSLESS LOGICAL TOPOLOGY</span>
+        <span className="panel-status"><i /> DOCUMENTED ROUTES</span>
       </div>
-      <InfrastructureMap />
+      <DetailedArchitectureMap />
     </section>
 
     <section className="section-block page-width">
@@ -74,7 +74,7 @@ const Architecture = () => (
           [LockKeyhole, "Encrypted tunnel", "Forwards the accepted request over the existing outbound connection."],
           [Container, "Nginx container", "Receives internal HTTP traffic on the isolated Docker network."],
           [Server, "Static response", "Returns the compiled React application from the physical node."],
-          [GitBranch, "Continuous replacement", "The next push rebuilds and replaces the running web image."],
+          [GitBranch, "Continuous replacement", "The next website-path push rebuilds and replaces the served web image."],
         ].map(([Icon, title, description], index) => (
           <li key={title}>
             <span className="sequence-number">0{index + 1}</span>

@@ -1,13 +1,16 @@
-import { ArrowUpRight, Code2, Keyboard, Monitor, Settings2, Terminal } from "lucide-react";
-import hyprlandImg from "../../../assets/hyprland.png";
+import { ArrowUpRight, Code2, Gauge, Keyboard, Monitor, Settings2, Terminal } from "lucide-react";
+import hyprlandImg from "../../../assets/hyprland-redacted.jpg";
 
 const desktopLayers = [
   ["01", "Hyprland", "Wayland compositor", "Tiling, animations, workspace control"],
   ["02", "Waybar", "System surface", "Workspaces, telemetry, media state"],
-  ["03", "Zsh + Kitty", "Terminal layer", "Fast shell workflow and remote administration"],
-  ["04", "Yazi", "File operations", "Keyboard-first local and remote file management"],
-  ["05", "KDE Connect", "Device bridge", "Payload transfer and phone integration"],
-  ["06", "Hyprlock", "Local security", "Session locking when the display stack is active"],
+  ["03", "Zsh + Kitty", "Terminal layer", "Oh My Zsh, shell helpers, and remote administration"],
+  ["04", "Pywal", "Theme generator", "Wallpaper-derived colors shared across the desktop"],
+  ["05", "Wofi", "Application launcher", "A keyboard-first launcher tuned to the local theme"],
+  ["06", "CAVA", "Audio visualizer", "Shader-backed terminal visualizations retained in the dotfiles"],
+  ["07", "Yazi", "File operations", "Keyboard-first local and remote file management"],
+  ["08", "KDE Connect", "Device bridge", "Payload transfer and phone integration"],
+  ["09", "Hyprlock", "Local security", "Session locking when the display stack is active"],
 ];
 
 const bindings = [
@@ -22,11 +25,11 @@ const bindings = [
 const Dotfiles = () => (
   <div className="site-page detail-page desktop-page">
     <header className="page-header page-width">
-      <div className="eyebrow"><span className="live-dot dormant-dot" /> desktop layer / retained</div>
+      <div className="eyebrow"><span className="live-dot dormant-dot" /> desktop layer / retained locally</div>
       <div className="page-header-grid">
         <h1>A desktop when the node needs one.</h1>
         <div className="header-side">
-          <p>The server operates headlessly, but its original Hyprland environment remains a deliberate local maintenance and recovery surface.</p>
+          <p>The server operates headlessly, but I kept its original Hyprland environment as a local maintenance, recovery, and configuration surface.</p>
           <a href="https://github.com/tanmayhutt/hyprland-dotfiles" target="_blank" rel="noreferrer" className="text-link">
             <Code2 size={15} /> Inspect dotfiles <ArrowUpRight size={14} />
           </a>
@@ -36,8 +39,8 @@ const Dotfiles = () => (
 
     <section className="page-width desktop-evidence">
       <div className="panel-chrome"><span>LOCAL DISPLAY CAPTURE</span><span>hyprland.session</span></div>
-      <div className="desktop-image-wrap"><img src={hyprlandImg} alt="Hyprland desktop running on the Arch Linux machine" /></div>
-      <div className="desktop-caption"><span>DISPLAY STACK / WAYLAND</span><p>The graphical environment is supporting infrastructure, not part of the public serving path.</p></div>
+      <div className="desktop-image-wrap"><img src={hyprlandImg} alt="Privacy-redacted capture of the Hyprland desktop retained on the Arch Linux machine" /></div>
+      <div className="desktop-caption"><span>DISPLAY STACK / WAYLAND</span><p>Original local session with private identifiers masked. The graphical environment is not part of the public serving path.</p></div>
     </section>
 
     <section className="section-block page-width">
@@ -69,6 +72,7 @@ const Dotfiles = () => (
           <div><Settings2 size={17} /><span><small>DEPLOY</small><code>./deploy.sh</code></span></div>
           <div><Terminal size={17} /><span><small>SYNC</small><code>git push origin main</code></span></div>
           <div><Monitor size={17} /><span><small>TARGET</small><code>~/.config</code></span></div>
+          <div><Gauge size={17} /><span><small>POWER PROFILE</small><code>./power-toggle.sh</code></span></div>
         </div>
       </div>
     </section>

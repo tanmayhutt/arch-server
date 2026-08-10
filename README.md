@@ -1,305 +1,218 @@
 <div align="center">
 
-![fastfetch](./assets/fastfetch.png)
+![Privacy-sanitized Fastfetch capture](./assets/fastfetch-sanitized.jpg)
 
 # arch-server
 
-**Headless Arch Linux Implementation for Network Attached Storage, Edge Computing, and Zero-Trust Web Hosting on Repurposed Hardware**
+**A headless Arch Linux node for private storage, remote administration, and zero-port public web delivery on repurposed hardware.**
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white)](https://archlinux.org/)
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=Cloudflare&logoColor=white)](https://www.cloudflare.com/)
+[![Docker](https://img.shields.io/badge/Docker-0db7ed?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
 [![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com/)
-[![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2671E5?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
+
+[Live documentation](https://arch-server.tanmaytiwari.me)
 
 </div>
 
-> **[LIVE DEMO: arch-server.tanmaytiwari.me](https://arch-server.tanmaytiwari.me)**: The website for this repository is currently being served directly from the physical hardware documented below. *(Note: GitHub blocks `target="_blank"` for security, so middle-click or Cmd/Ctrl+Click to open in a new tab!)*
+## What this project is
 
----
+This project began with an old Lenovo IdeaPad whose display had become unreliable. Instead of retiring it, I converted it into a headless Arch Linux node.
 
-## Architectural Overview
+The machine now provides four practical surfaces:
 
-This repository documents the system architecture, configuration, and CI/CD deployment strategy for a headless Arch Linux server deployed on a repurposed Lenovo IdeaPad.
+- A public documentation website served from the same physical machine it describes
+- Private cross-platform storage through Samba
+- Remote administration through OpenSSH over Tailscale
+- Identity-gated remote shell access through Cloudflare Access, including browser rendering
 
-The system functions as a highly secure, zero-trust edge server. It hosts a globally accessible production React website via **Cloudflare Tunnels**, automated via **GitHub Actions**, while securely operating as a local Network Attached Storage (NAS) node strictly within a **Tailscale** mesh network.
+The retained Hyprland desktop remains available for local maintenance and recovery. It is not part of the public serving path.
+
+## Architecture
 
 ```mermaid
-graph TD
-    %% EXTERNAL
-    User["Public Web Browser"]
-    Admin["Admin Devices"]
-    GH["GitHub Actions CI/CD"]
+flowchart LR
+    Visitor[Public browser]
+    Operator[Owned admin device]
+    Remote[Authorized remote client]
+    Push[Website path push]
+    Actions[GitHub Actions runner]
 
-    %% CLOUDFLARE EDGE
-    subgraph Cloudflare ["Cloudflare Global Network"]
-        DNS["DNS Resolution"]
-        WAF["Web Application Firewall"]
-        CDN["CDN / Cache"]
-        ZT["Zero Trust Edge"]
-        DNS --> WAF --> CDN --> ZT
-    end
-    User -->|"HTTPS"| DNS
+    Edge[Cloudflare edge\nDNS and TLS]
+    Access[Cloudflare Access\nidentity policy]
+    Tunnel[Outbound tunnel]
+    Mesh[Tailscale mesh\nWireGuard peer path]
 
-    %% TAILSCALE
-    subgraph Tailscale ["Tailscale Mesh VPN"]
-        DERP["Tailscale Control Plane & DERP Relays"]
-    end
-    Admin <-->|"WireGuard P2P"| DERP
-    GH -->|"SSH Deployment via Tailscale"| DERP
+    subgraph Origin[Physical Lenovo IdeaPad / Arch Linux]
+        Tail0[tailscale0]
+        SSH[OpenSSH]
+        Samba[Samba]
+        SSD[(233 GiB ext4 SSD)]
 
-    %% PHYSICAL HARDWARE
-    subgraph Hardware ["Lenovo IdeaPad 3 - Core i3 / 8GB RAM"]
-        WLAN["802.11ac Wi-Fi Interface"]
-        SSD[("233 GiB Ext4 SSD")]
-
-        %% ARCH LINUX OS
-        subgraph ArchHost ["Arch Linux Host OS"]
-            TS0["tailscale0 Interface 100.x.x.x"]
-            SSHD["OpenSSH Daemon"]
-            SMBD["Samba NAS Daemon"]
-
-            %% DOCKER
-            subgraph Docker ["Docker Engine & Bridge Network"]
-                CF_Tunnel["Container: cloudflared"]
-                NGINX["Container: Nginx Alpine"]
-                REACT["React / Vite Static Bundle"]
-
-                CF_Tunnel <-->|"Reverse Proxy HTTP"| NGINX
-                NGINX -->|"Serves"| REACT
-            end
+        subgraph Compose[Docker Compose public workload]
+            Connector[cloudflared]
+            Nginx[Nginx]
+            Site[React and Vite bundle]
+            Connector --> Nginx --> Site
         end
 
-        %% Internal OS bindings
-        WLAN <--> TS0
-        WLAN <--> CF_Tunnel
-
-        TS0 <--> SSHD
-        TS0 <--> SMBD
-        SMBD -->|"Read/Write"| SSD
+        Repo[Repository and deployment environment]
+        Rebuild[Docker Compose build and replace]
+        Repo --> Rebuild --> Nginx
+        Tail0 --> SSH
+        Tail0 --> Samba --> SSD
     end
 
-    %% External to Hardware Bindings
-    ZT <-->|"Outbound-Only Encrypted Tunnel"| CF_Tunnel
-    DERP <-->|"WireGuard NAT Traversal"| TS0
+    Visitor -->|HTTPS| Edge --> Tunnel --> Connector
+    Operator --> Mesh --> Tail0
+    Remote --> Access --> Tunnel
+    Connector --> SSH
+    Push --> Actions -->|joins tailnet| Mesh
+    Actions -->|SSH deployment| Repo
 ```
 
----
+### Trust boundaries
 
-## Repository Structure
+| Plane | Purpose | Path |
+|---|---|---|
+| Public data plane | Serve this static website | Browser → Cloudflare edge → outbound tunnel → cloudflared → Nginx |
+| Private control plane | Administration and storage | Owned device → Tailscale → `tailscale0` → OpenSSH or Samba |
+| Deployment plane | Replace the served frontend | Website path change → GitHub Actions → Tailscale → SSH → repository update → Compose rebuild |
+| Identity-gated shell | Remote access without joining the tailnet | Authorized client → Cloudflare Access → tunnel route → cloudflared → OpenSSH |
+
+No router port forwarding is required for these paths. Private identifiers, hostnames, share names, and access policies are intentionally omitted from this public repository.
+
+## Public website runtime
+
+The root [`docker-compose.yml`](./docker-compose.yml) owns only the public web workload:
+
+- `arch-server-docs`: an Nginx container serving the compiled React bundle
+- `cloudflared`: the outbound Cloudflare Tunnel connector
+
+OpenSSH, Tailscale, Samba, NetworkManager, and the desktop session are host services. They are not Docker services in this repository.
+
+The web container uses a multi-stage Node.js and Nginx build, a memory limit, a CPU limit, `no-new-privileges`, and `restart: unless-stopped`. The tunnel container also uses `no-new-privileges` and `restart: unless-stopped`.
+
+## Deployment
+
+The workflow in [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) runs when the website or deployment workflow changes on `main`.
+
+1. GitHub checks out the repository.
+2. The runner joins the private tailnet using a repository secret.
+3. The SSH action connects to the node over that private network.
+4. The repository is cloned or updated under the server's services directory.
+5. The tunnel token is written to a local, ignored environment file.
+6. Docker Compose rebuilds and replaces the public workload.
+
+A change to root infrastructure files such as `docker-compose.yml` does not currently trigger this path unless the workflow filter is expanded.
+
+## Hardware profile
+
+| Subsystem | Specification |
+|---|---|
+| Model | Lenovo IdeaPad 3 15IML05 |
+| Processor | Intel Core i3-10110U, 4 threads |
+| Memory | 8 GiB DDR4 |
+| Storage | 233 GiB SSD with ext4 |
+| Graphics | Intel UHD Graphics |
+| Network | Wi-Fi through NetworkManager plus Tailscale |
+| Operating system | Arch Linux x86_64 |
+
+The Fastfetch image above is privacy-sanitized. Volatile utilization values are a historical snapshot, not live telemetry.
+
+## Remote administration
+
+### OpenSSH over Tailscale
+
+Owned devices and the deployment runner use ordinary OpenSSH over the private Tailscale network. Tailscale provides peer discovery, NAT traversal, and WireGuard encryption. Direct peer connectivity is preferred; relays are a fallback when a direct path cannot be established.
+
+### Cloudflare Access
+
+An identity-gated Cloudflare Access application provides a second remote path for authorized clients. The exact hostname, allowed identities, session policy, and origin authentication configuration remain private.
+
+### Browser terminal
+
+Cloudflare browser rendering can expose the same protected shell in a modern browser when the access policy permits it. This provides a no-install recovery path without publishing a direct origin endpoint.
+
+## Samba NAS
+
+Samba provides cross-platform file access reached privately over Tailscale.
+
+| Client | Generic connection form |
+|---|---|
+| macOS | `smb://<private-node>` |
+| Windows | `\\<private-node>` |
+| Android | SMB client pointed at `<private-node>` |
+| iOS / iPadOS | `smb://<private-node>` |
+
+This repository does not contain the active Samba or firewall configuration, so it documents the intended private access path without claiming an unverified interface binding.
+
+## Headless lifecycle
+
+- Lid-close behavior was configured so the damaged display does not suspend the server.
+- Host daemons are managed through systemd.
+- The two public containers declare `restart: unless-stopped`.
+- After an ordinary reboot, enabled host services and the Compose restart policy restore the intended serving path once networking is available.
+- Recovery after a total power loss still depends on the machine receiving power and completing its firmware and operating-system boot sequence.
+
+## Retained desktop and local tools
+
+The local desktop is versioned separately in [hyprland-dotfiles](https://github.com/tanmayhutt/hyprland-dotfiles). It includes Hyprland, Waybar, Kitty, Zsh, Pywal, Wofi, CAVA, Hyprlock, and helper scripts for deployment and power profiles.
+
+Operational tools used on the node include:
+
+- `wlctl` for NetworkManager-oriented wireless administration
+- `yazi` for keyboard-first file operations
+- KDE Connect for local device transfer
+- Small shell scripts for battery, network, media, and session checks
+
+The website uses a privacy-redacted version of the original desktop capture. It masks network names, local addresses, account identifiers, filesystem paths, and unsuitable terminal text while retaining the non-private system state from that session.
+
+## Repository structure
 
 ```text
 arch-server/
-├── assets/                     # Static media and documentation assets
-│   └── fastfetch.png
-├── website/                    # React frontend application
-│   ├── src/                    # UI components and pages
-│   ├── public/                 # Static web assets (favicon, robots.txt)
-│   ├── Dockerfile              # Container build instructions for frontend
-│   └── package.json            # Node.js dependencies
-├── .github/workflows/          # CI/CD pipeline definitions
-│   └── deploy.yml              # Automated Zero-Trust deployment script
-├── docker-compose.yml          # Root orchestration for all homelab services
-├── README.md                   # System documentation
-└── .env                        # Environment variables (Ignored in Git)
+├── .github/workflows/deploy.yml
+├── assets/
+│   ├── fastfetch-sanitized.jpg
+│   └── hyprland-redacted.jpg
+├── website/
+│   ├── public/
+│   ├── src/components/
+│   ├── src/pages/
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml
+└── README.md
 ```
 
----
-
-## The Web Infrastructure (Zero-Trust)
-
-The server hosts a high-performance React frontend (`/website`) served by Nginx. The infrastructure is designed with enterprise-grade security principles, completely isolating the physical home network from the public internet.
-
-### 1. Zero-Trust Routing (Cloudflare Tunnels)
-Instead of relying on dangerous local port forwarding or exposing the home IP address, public web traffic is routed through **Cloudflare Zero Trust Tunnels**.
-- **No Open Ports:** The physical router has exactly zero open ports.
-- **Outbound Only:** The `cloudflared` Docker container establishes a secure, outbound-only connection to Cloudflare's edge servers.
-- **Automatic SSL:** Cloudflare automatically provisions and enforces strict SSL/HTTPS at the edge without requiring local `certbot` management.
-
-### 2. CI/CD Deployment Pipeline (GitHub Actions)
-Deployments are 100% automated via GitHub Actions, establishing a secure tunnel into the local network without exposing SSH to the internet.
-- On every push to `main`, a GitHub Action runner boots up.
-- The runner connects to the Lenovo server securely via **SSH over Tailscale**.
-- It pulls the latest code, injects the Cloudflare Tunnel Token, and completely rebuilds the Docker containers (`docker compose up -d --build`).
-
-### 3. Hardened Docker Containers
-The application runs in isolated, optimized Docker containers:
-- **Node.js 22 & Nginx Alpine:** Multi-stage builds are used to compile the React/Vite application into static files, served by a lightweight Nginx container.
-- **Resource Limits:** Hard caps on RAM (512MB) and CPU cores prevent memory leaks from freezing the host server.
-- **Privilege Stripping:** Containers run with `no-new-privileges: true` to prevent any potential kernel privilege escalation.
-
----
-
-## Hardware Specifications
-
-| Subsystem | Specification |
-|-----------|---------------|
-| **Chassis/Model** | Lenovo IdeaPad 3 15IML05 |
-| **Processor** | Intel Core i3-10110U (4 threads @ 4.10 GHz) |
-| **Memory** | 8 GiB DDR4 |
-| **Storage Topology** | 233 GiB Solid State Drive (ext4 filesystem) |
-| **Graphics** | Intel UHD Graphics (Integrated) |
-| **Network Interface** | 802.11ac Wi-Fi via NetworkManager |
-| **Operating System** | Arch Linux x86_64 |
-
----
-
-## Administrative Network & Remote Access
-
-The server supports two remote access methods depending on the connecting device.
-
-### Method 1: SSH over Tailscale (Trusted Devices)
-
-For devices with Tailscale installed and authenticated. This is the default method used by the CI/CD pipeline.
-
-- **NAT Traversal:** Seamless connectivity regardless of physical network location.
-- **End-to-End Encryption:** All traffic secured via WireGuard tunnels.
-- **Identity-Based Access:** Restricted to authenticated nodes within the Tailscale tenant.
+## Local website development
 
 ```bash
-ssh <username>@<tailscale-ip>
+cd website
+npm ci
+npm run dev
 ```
 
----
+Validation commands:
 
-### Method 2: SSH over Cloudflare Access (Any Device, Anywhere)
-
-For accessing the server from any machine without Tailscale — a work laptop, a phone, a public terminal. Routed through the existing `cloudflared` infrastructure with a mandatory identity verification layer.
-
-**Security model (two factors required):**
-- **Email OTP** — Cloudflare Access sends a one-time PIN to the owner's email before any connection is allowed.
-- **SSH Private Key** — Cryptographic key on the connecting device is required after authentication.
-
-**No open ports are exposed.** Traffic is routed through the same Cloudflare Zero Trust tunnel used by the website.
-
-#### Client Setup (one-time per device)
-
-1. Install `cloudflared`:
 ```bash
-# macOS
-brew install cloudflare/cloudflare/cloudflared
-
-# Linux (Debian/Ubuntu)
-sudo apt install cloudflared
-
-# Windows
-winget install Cloudflare.cloudflared
+npm run lint
+npm run build
 ```
 
-2. Add to `~/.ssh/config`:
-```
-Host ssh.tanmaytiwari.me
-  ProxyCommand cloudflared access ssh --hostname %h
-  User tanmay
-  IdentityFile ~/.ssh/id_ed25519
-  ServerAliveInterval 60
-```
+The frontend uses React, Vite, Tailwind CSS, Motion, selected Magic UI interaction patterns, a custom canvas particle globe, and a lossless zoomable SVG topology. JetBrains Mono is served locally with the site instead of loaded from a third-party font request.
 
-3. Connect from anywhere:
-```bash
-ssh ssh.tanmaytiwari.me
-# First use: browser opens → enter email → enter OTP → shell
-# Repeat within 8h session: instant connect
-```
+## Security notes
 
----
+- Secrets belong in GitHub Actions secrets or local ignored environment files.
+- No access tokens, private keys, internal addresses, SSIDs, usernames, or share paths should be committed.
+- Public diagrams describe boundaries and flows, not usable connection details.
+- Static interface labels represent documented configuration, not live monitoring.
 
-### Method 3: Browser-Based SSH (Zero Installs)
+## Roadmap
 
-For situations where you cannot install any software — a library computer, a friend's phone, a school tablet. A full terminal is rendered directly inside a web browser tab.
-
-**Security model:**
-- **Email OTP** — Cloudflare Access gates access with a one-time PIN.
-- **No client software required** — works on any device with a modern browser.
-
-**How to use:**
-1. Open **[https://ssh.tanmaytiwari.me](https://ssh.tanmaytiwari.me)** in a modern browser (Chrome, Safari, Firefox).
-2. Cloudflare Access will prompt for your email address.
-3. Enter the one-time PIN sent to that email.
-4. A terminal emulator renders in the browser — enter your server username (`tanmay`).
-5. Full interactive shell session, no downloads needed.
-
-> [!WARNING]
-> **Configuration Requirements:**
-> - The Cloudflare Tunnel service type must be set to `SSH` (not TCP/HTTP).
-> - **"Browser rendering"** must be explicitly toggled ON in the Cloudflare Access Application settings, with `SSH` selected in the dropdown.
-> - Access policies must ONLY use `Allow` (No `Bypass` or `Service Auth` actions allowed).
-
-#### Access Comparison
-
-| | Tailscale SSH | Cloudflare Access SSH | Browser SSH |
-|---|---|---|---|
-| Requires Tailscale | YES | No | No |
-| Works from any device | No | **YES** | **YES** |
-| Requires client install | YES (Tailscale) | YES (cloudflared) | **No** |
-| Zero open ports | YES | **YES** | **YES** |
-| Auth mechanism | Device trust | OTP + SSH key | **OTP only** |
-| Audit logs | No | **YES** | **YES** |
-
----
-
-## Storage Subsystem: Samba NAS
-
-The primary storage interface is implemented using the Server Message Block (SMB) protocol via Samba. This facilitates seamless cross-platform file operations across the private mesh network.
-
-### Client Integration
-| Client OS | Connection URI Protocol |
-|-----------|-------------------------|
-| **macOS** | `smb://<tailscale-ip>` |
-| **Windows** | `\\<tailscale-ip>` |
-| **iOS / iPadOS** | `smb://<tailscale-ip>` |
-
-> **Security Definition:** The SMB daemon listens exclusively on the Tailscale virtual interface. It is completely inaccessible from the public internet.
-
----
-
-## Terminal Utilities
-
-### Network Management (`wlctl`)
-Wireless network provisioning is managed via **wlctl**, an ncurses-based terminal user interface built for NetworkManager. It provides a robust administrative interface for SSID scanning and diagnostics over SSH.
-
-### File System Navigation (`yazi`)
-Terminal-based file operations are accelerated using **Yazi**, an asynchronous TUI file manager written in Rust, providing image previews and archive extraction directly within the SSH session.
-
-### Automation Scripts (`~/scripts/`)
-A suite of lightweight bash scripts is deployed for rapid system introspection over SSH:
-- `battery.sh` - Power Telemetry
-- `network-status.sh` - WLAN State
-- `whatsong.sh` - Media State
-- `whoami.sh` - Session Identity
-
----
-
-## System Provisioning
-
-The following sequences detail the required commands to bootstrap the core server environment from a minimal Arch Linux installation.
-
-### 1. Docker & Docker Compose
-```bash
-sudo pacman -Sy docker docker-compose
-sudo systemctl enable --now docker
-sudo usermod -aG docker <username>
-```
-
-### 2. Secure Shell & Tailscale
-```bash
-sudo systemctl enable --now sshd
-yay -S tailscale-bin
-sudo systemctl enable --now tailscaled
-sudo tailscale up
-```
-
-### 3. SMB Storage Deployment
-```bash
-sudo pacman -S samba
-sudo smbpasswd -a <username>
-sudo systemctl enable --now smb nmb
-```
-
----
-
-<div align="center">
-
-*Engineered on Repurposed Hardware. Secured via Mesh Networking. Deployed via Edge Compute.*
-
-</div>
+- Home automation and ESP8266 experimentation, intentionally not deployed yet
+- Optional verified health reporting if a minimal public-safe signal is introduced
+- Host configuration documentation for services that currently live outside this repository
