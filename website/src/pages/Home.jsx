@@ -62,12 +62,12 @@ const Home = () => (
       </div>
 
       <div className="globe-panel">
-        <div className="panel-chrome"><span>ROUTES TO THE PHYSICAL ORIGIN</span><span>INDIA / LENOVO IDEAPAD 3</span></div>
+        <div className="panel-chrome"><span>LIVE NETWORK MODEL</span><span>3 ROUTES / 1 PHYSICAL NODE</span></div>
         <NetworkGlobe />
         <div className="globe-readout">
-          <div><span>PUBLIC</span><strong>Cloudflare Tunnel</strong></div>
-          <div><span>PRIVATE</span><strong>Tailscale / WireGuard</strong></div>
-          <div><span>ORIGIN</span><strong>Arch Linux at home</strong></div>
+          <div><span>INGRESS</span><strong>Cloudflare / TLS 443</strong></div>
+          <div><span>ADMIN</span><strong>Tailscale / WireGuard</strong></div>
+          <div><span>DEPLOY</span><strong>GitHub / SSH rebuild</strong></div>
         </div>
       </div>
     </section>

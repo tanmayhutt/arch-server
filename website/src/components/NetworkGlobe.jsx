@@ -11,6 +11,56 @@ const originVector = {
   z: Math.cos(originLatitude) * Math.sin(originLongitude),
 };
 
+const latLonToVector = (latitude, longitude) => {
+  const lat = (latitude * Math.PI) / 180;
+  const lon = (longitude * Math.PI) / 180;
+  return {
+    x: Math.cos(lat) * Math.cos(lon),
+    y: Math.sin(lat),
+    z: Math.cos(lat) * Math.sin(lon),
+  };
+};
+
+const routeNodes = [
+  {
+    id: "public",
+    label: "CF EDGE",
+    detail: "TLS / 443",
+    color: [47, 112, 139],
+    vector: latLonToVector(40, -74),
+  },
+  {
+    id: "private",
+    label: "TAILNET PEER",
+    detail: "WIREGUARD",
+    color: [71, 119, 93],
+    vector: latLonToVector(1, 103),
+  },
+  {
+    id: "deploy",
+    label: "CI RUNNER",
+    detail: "SSH / REBUILD",
+    color: [168, 102, 63],
+    vector: latLonToVector(52, 0),
+    labelSide: "left",
+  },
+];
+
+const createRouteSamples = (from, to, count = 42) => Array.from({ length: count }, (_, index) => {
+  const progress = index / (count - 1);
+  const x = from.x * (1 - progress) + to.x * progress;
+  const y = from.y * (1 - progress) + to.y * progress;
+  const z = from.z * (1 - progress) + to.z * progress;
+  const length = Math.hypot(x, y, z) || 1;
+  const lift = 1 + Math.sin(progress * Math.PI) * 0.12;
+  return { x: (x / length) * lift, y: (y / length) * lift, z: (z / length) * lift };
+});
+
+const globeRoutes = routeNodes.map((node) => ({
+  ...node,
+  samples: createRouteSamples(node.vector, originVector),
+}));
+
 const createSpherePoints = (count) => Array.from({ length: count }, (_, index) => {
   const normalizedIndex = index / Math.max(1, count - 1);
   const y = 1 - normalizedIndex * 2;
@@ -108,6 +158,84 @@ const NetworkGlobe = ({ className = "" }) => {
       };
     };
 
+    const applyPointerField = (projected, pointer, radius, strength = 1) => {
+      if (!pointer.active || reducedMotion) return projected;
+      const dx = projected.x - pointer.localX;
+      const dy = projected.y - pointer.localY;
+      const distance = Math.max(0.01, Math.hypot(dx, dy));
+      const interactionRadius = Math.max(105, radius * 0.72);
+      const influence = clamp(1 - distance / interactionRadius);
+      const displacement = influence ** 2 * radius * 0.18 * strength;
+      return {
+        ...projected,
+        x: projected.x + (dx / distance) * displacement + pointer.velocityX * influence * 0.16,
+        y: projected.y + (dy / distance) * displacement + pointer.velocityY * influence * 0.16,
+      };
+    };
+
+    const drawRoutes = (rotation, tilt, radius, centerX, centerY, pointer) => {
+      globeRoutes.forEach((route) => {
+        const projectedSamples = route.samples.map((sample) => {
+          const projected = rotateAndProject(sample, rotation, tilt, radius, centerX, centerY);
+          return applyPointerField(projected, pointer, radius, 0.72);
+        });
+
+        context.save();
+        context.lineWidth = 1;
+        context.setLineDash(route.id === "deploy" ? [3, 5] : [1.5, 4]);
+        context.beginPath();
+        projectedSamples.forEach((sample, index) => {
+          if (index === 0) context.moveTo(sample.x, sample.y);
+          else context.lineTo(sample.x, sample.y);
+        });
+        const averageDepth = projectedSamples.reduce((sum, sample) => sum + clamp((sample.z + 1) / 2), 0) / projectedSamples.length;
+        context.strokeStyle = `rgba(${route.color.join(", ")}, ${0.31 + averageDepth * 0.27})`;
+        context.stroke();
+        context.restore();
+      });
+    };
+
+    const drawNode = ({ projected, label, detail, color, origin = false, labelSide }) => {
+      const depth = clamp((projected.z + 1) / 2);
+      const alpha = 0.48 + depth * 0.42;
+      const rightSide = labelSide ? labelSide === "right" : projected.x <= width * 0.72;
+      const labelX = projected.x + (rightSide ? 13 : -13);
+      const align = rightSide ? "left" : "right";
+
+      context.save();
+      context.strokeStyle = `rgba(${color.join(", ")}, ${alpha})`;
+      context.fillStyle = `rgba(${color.join(", ")}, ${Math.min(0.95, alpha + 0.08)})`;
+      context.lineWidth = origin ? 1.2 : 0.9;
+
+      if (origin) {
+        const size = 7;
+        context.strokeRect(projected.x - size / 2, projected.y - size / 2, size, size);
+        context.fillRect(projected.x - 1.5, projected.y - 1.5, 3, 3);
+      } else {
+        context.beginPath();
+        context.arc(projected.x, projected.y, 3.6, 0, Math.PI * 2);
+        context.stroke();
+        context.beginPath();
+        context.arc(projected.x, projected.y, 1.2, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.beginPath();
+      context.moveTo(projected.x + (rightSide ? 5 : -5), projected.y);
+      context.lineTo(projected.x + (rightSide ? 10 : -10), projected.y);
+      context.stroke();
+
+      context.textAlign = align;
+      context.textBaseline = "bottom";
+      context.font = '600 8px "JetBrains Mono", monospace';
+      context.fillText(label, labelX, projected.y - 1);
+      context.textBaseline = "top";
+      context.font = '500 7px "JetBrains Mono", monospace';
+      context.fillStyle = `rgba(71, 78, 76, ${0.56 + depth * 0.22})`;
+      context.fillText(detail, labelX, projected.y + 3);
+      context.restore();
+    };
+
     const draw = (now) => {
       const elapsed = (now - start) / 1000;
       const pointer = pointerRef.current;
@@ -134,6 +262,8 @@ const NetworkGlobe = ({ className = "" }) => {
       sceneCenterX = centerX;
       sceneCenterY = centerY;
       sceneRadius = radius;
+
+      drawRoutes(rotation, tilt, radius, centerX, centerY, pointer);
 
       spherePointsRef.current.forEach((particle) => {
         const breathingRadius = radius * (
@@ -202,6 +332,36 @@ const NetworkGlobe = ({ className = "" }) => {
         context.beginPath();
         context.arc(particleX, particleY, pointSize, 0, Math.PI * 2);
         context.fill();
+      });
+
+      globeRoutes.forEach((route) => {
+        const projected = applyPointerField(
+          rotateAndProject(route.vector, rotation, tilt, radius * 1.02, centerX, centerY),
+          pointer,
+          radius,
+          0.78,
+        );
+        drawNode({
+          projected,
+          label: route.label,
+          detail: route.detail,
+          color: route.color,
+          labelSide: route.labelSide,
+        });
+      });
+
+      const projectedOrigin = applyPointerField(
+        rotateAndProject(originVector, rotation, tilt, radius * 1.025, centerX, centerY),
+        pointer,
+        radius,
+        0.9,
+      );
+      drawNode({
+        projected: projectedOrigin,
+        label: "HOME ORIGIN",
+        detail: "ARCH / NGINX",
+        color: [168, 102, 63],
+        origin: true,
       });
 
       frameRef.current = isVisible && isDocumentVisible && !reducedMotion
@@ -295,7 +455,7 @@ const NetworkGlobe = ({ className = "" }) => {
     <div
       ref={containerRef}
       className={`network-globe ${className}`}
-      aria-label="Deformable particle globe centered on the physical Arch Linux origin in India"
+      aria-label="Deformable particle globe showing the physical Arch Linux server in India and its Cloudflare, Tailscale, and GitHub deployment routes"
       role="img"
     >
       <canvas ref={canvasRef} aria-hidden="true" />
