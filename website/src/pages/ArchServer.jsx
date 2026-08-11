@@ -2,77 +2,48 @@ import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   Code2,
-  FlaskConical,
+  Container,
   HardDrive,
   KeyRound,
   MonitorOff,
   Network,
-  Radio,
-  RefreshCcw,
   Server,
   Terminal,
   Wrench,
 } from "lucide-react";
 
-const accessMethods = [
-  {
-    index: "01",
-    icon: Network,
-    title: "OpenSSH over Tailscale",
-    label: "TRUSTED DEVICES",
-    description: "Direct administration over the private WireGuard mesh. This is the default path for owned devices and the deployment runner.",
-    command: "ssh <user>@<private-node>",
-    tone: "private",
-  },
-  {
-    index: "02",
-    icon: KeyRound,
-    title: "Cloudflare Access",
-    label: "AUTHORIZED DEVICES",
-    description: "Remote SSH is proxied after an identity policy is satisfied, without exposing port 22 on the home router.",
-    command: "ssh <identity-gated-host>",
-    tone: "public",
-  },
-  {
-    index: "03",
-    icon: Terminal,
-    title: "Browser terminal",
-    label: "ZERO CLIENT INSTALL",
-    description: "Cloudflare can render the shell in a modern browser after the same access boundary is satisfied.",
-    command: "identity-gated browser session",
-    tone: "origin",
-  },
+const accessRoutes = [
+  [Network, "My own devices", "Tailscale + OpenSSH", "The normal route. A trusted device joins the WireGuard mesh, then connects directly to the private node."],
+  [KeyRound, "A borrowed browser", "Cloudflare Access", "The portable route. Cloudflare verifies an allowed identity before it renders a browser terminal."],
+  [HardDrive, "Files, not a shell", "Samba + Tailscale", "The SSD appears as a private network share on my Mac, phone, tablet, and other enrolled devices."],
 ];
 
-const continuity = [
-  {
-    icon: MonitorOff,
-    label: "CLOSED-LID OPERATION",
-    title: "Headless by design",
-    description: "The damaged display is no longer part of the serving path. The host is configured so lid-close behavior does not suspend the node.",
-  },
-  {
-    icon: RefreshCcw,
-    label: "SERVICE RECOVERY",
-    title: "Restart intent is declared",
-    description: "Both public containers use restart: unless-stopped. Host daemons such as OpenSSH and Tailscale remain managed separately by systemd.",
-  },
-  {
-    icon: FlaskConical,
-    label: "PLANNED / NOT DEPLOYED",
-    title: "Local automation later",
-    description: "Home automation and ESP8266 experiments remain on the roadmap. They are not part of the current production surface.",
-  },
+const machineNotes = [
+  ["Hardware", "Lenovo IdeaPad 3 15IML05, Intel Core i3-10110U, 8 GiB memory"],
+  ["System", "Arch Linux x86_64 on an ext4 volume of roughly 233 GiB"],
+  ["Host services", "OpenSSH, Tailscale, Samba, NetworkManager, and systemd"],
+  ["Compose workload", "One Nginx container for this site and one cloudflared container for public ingress"],
+  ["Router exposure", "No forwarded ports. The public connection begins outbound from the laptop"],
+  ["Failure recovery", "Closed-lid operation plus systemd and restart: unless-stopped for the declared services"],
+];
+
+const smallTools = [
+  ["yazi", "keyboard-first file work"],
+  ["wlctl", "wireless provisioning from the terminal"],
+  ["KDE Connect", "moving files between the laptop and phone"],
+  ["zoxide + ripgrep", "getting around and finding things quickly"],
+  ["network-status.sh", "a small, readable network check"],
+  ["battery.sh / whoami.sh", "tiny local status helpers"],
 ];
 
 const ArchServer = () => (
-  <div className="site-page detail-page">
+  <div className="site-page detail-page server-page">
     <header className="page-header page-width">
-      <div className="eyebrow">documented node / physical origin</div>
+      <div className="eyebrow">the physical machine / the practical details</div>
       <div className="page-header-grid">
-        <h1>The machine behind the edge.</h1>
+        <h1>The laptop behind this page.</h1>
         <div className="header-side">
-          <p>An 8 GiB Lenovo laptop running Arch Linux as a headless origin, private NAS, deployment target, and secure remote shell.</p>
+          <p>An old Lenovo running Arch as a headless origin, a private file share, a deployment target, and a shell I can reach when I am away.</p>
           <a href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noreferrer" className="text-link">
             <Code2 size={15} /> Inspect source <ArrowUpRight size={14} />
           </a>
@@ -81,7 +52,7 @@ const ArchServer = () => (
     </header>
 
     <section className="page-width node-dashboard">
-      <div className="panel-chrome"><span>NODE PROFILE / DOCUMENTED STATE</span><span>PHYSICAL HARDWARE</span></div>
+      <div className="panel-chrome"><span>THE MACHINE, NOT LIVE TELEMETRY</span><span>DOCUMENTED CONFIGURATION</span></div>
       <div className="node-dashboard-grid">
         <div className="node-core">
           <div className="node-core-icon"><Server size={31} strokeWidth={1.3} /></div>
@@ -90,88 +61,76 @@ const ArchServer = () => (
         <div className="node-telemetry">
           {[
             ["OS", "Arch Linux x86_64"],
-            ["RUNTIME", "Docker Compose"],
-            ["STORAGE", "233 GiB / ext4"],
-            ["NETWORK", "Wi-Fi + WireGuard"],
+            ["ROOT DISK", "~233 GiB / ext4"],
             ["PUBLIC INGRESS", "Cloudflare Tunnel"],
+            ["PRIVATE NETWORK", "Tailscale / WireGuard"],
+            ["CONTAINER RUNTIME", "Docker Compose"],
             ["OPEN ROUTER PORTS", "0"],
           ].map(([label, value]) => <div className="telemetry-row" key={label}><span>{label}</span><strong>{value}</strong></div>)}
         </div>
       </div>
     </section>
 
-    <section className="section-block page-width">
-      <div className="section-heading">
-        <div><span className="section-index">01 / ACCESS</span><h2>Three paths in. No exposed ports.</h2></div>
-        <p>Each method serves a different operating condition without turning the home router into a public entry point.</p>
+    <section className="section-block page-width terminal-door">
+      <div className="terminal-door-copy">
+        <span className="section-index">THE BROWSER TERMINAL</span>
+        <h2>The address I use when Tailscale is not on the device.</h2>
+        <p><strong>ssh.tanmaytiwari.me</strong> is not an open shell. Cloudflare Access asks who I am first, and only an approved identity can reach the browser-rendered SSH session. OpenSSH still guards the origin behind that check.</p>
+        <a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noreferrer" className="primary-action">
+          Open the identity-gated terminal <ArrowUpRight size={15} />
+        </a>
       </div>
-      <div className="access-method-grid">
-        {accessMethods.map(({ index, icon: Icon, title, label, description, command, tone }) => (
-          <article className={`access-method method-${tone}`} key={index}>
-            <div className="access-method-top"><span>{index}</span><Icon size={20} strokeWidth={1.5} /></div>
-            <h3>{title}</h3><small>{label}</small><p>{description}</p><code>{command}</code>
-          </article>
-        ))}
-      </div>
-    </section>
-
-    <section className="section-block page-width remote-grid">
-      <div className="remote-copy">
-        <span className="section-index">02 / REMOTE SHELL</span>
-        <h2>Identity before connectivity.</h2>
-        <p>Cloudflare Access verifies the operator before a remote session reaches OpenSSH. Tailscale uses trusted device identity for the private path. Public documentation stops at that boundary.</p>
-        <Link to="/architecture" className="primary-action">Trace the access boundary <ArrowUpRight size={15} /></Link>
-      </div>
-      <div className="shell-sequence">
-        <div className="panel-chrome"><span>SESSION NEGOTIATION</span><span>declared sequence</span></div>
+      <div className="terminal-route" aria-label="Browser terminal access sequence">
+        <div className="terminal-route-head"><Terminal size={18} /><span>ssh.tanmaytiwari.me</span></div>
         <ol>
-          {[
-            ["01", "Request", "Open an identity-gated SSH route from an authorized client."],
-            ["02", "Verify", "Cloudflare Access checks the allowed identity and session policy."],
-            ["03", "Tunnel", "Traffic uses an existing outbound-only connection toward the host."],
-            ["04", "Shell", "OpenSSH grants the terminal session after origin authentication."],
-          ].map(([index, title, detail]) => <li key={index}><span>{index}</span><div><strong>{title}</strong><p>{detail}</p></div></li>)}
+          <li><span>01</span><p><strong>Browser</strong> requests the protected hostname</p></li>
+          <li><span>02</span><p><strong>Access</strong> checks the allowed identity and policy</p></li>
+          <li><span>03</span><p><strong>Tunnel</strong> carries the approved session inward</p></li>
+          <li><span>04</span><p><strong>OpenSSH</strong> authenticates at the laptop</p></li>
         </ol>
-        <div className="shell-command"><span>$</span><code>ssh &lt;identity-gated-host&gt;</code><i /></div>
       </div>
     </section>
 
-    <section className="section-block page-width">
+    <section className="section-block page-width access-editorial">
       <div className="section-heading">
-        <div><span className="section-index">03 / CONTINUITY</span><h2>What keeps a laptop useful as a node.</h2></div>
-        <p>Headless operation, explicit restart behavior, and a deliberately small workload matter more here than pretending this is datacenter hardware.</p>
+        <div><span className="section-index">ACCESS, BY SITUATION</span><h2>Three routes, because one route should not do everything.</h2></div>
+        <p>The public site, private administration, and file sharing remain separate even though they end at the same laptop.</p>
       </div>
-      <div className="continuity-grid">
-        {continuity.map(({ icon: Icon, label, title, description }) => (
-          <article key={title}>
-            <Icon size={20} strokeWidth={1.5} />
-            <span>{label}</span>
-            <h3>{title}</h3>
-            <p>{description}</p>
+      <div className="access-route-list">
+        {accessRoutes.map(([Icon, situation, route, detail], index) => (
+          <article key={route}>
+            <span>0{index + 1}</span><Icon size={20} strokeWidth={1.5} />
+            <div><small>{situation}</small><h3>{route}</h3></div><p>{detail}</p>
           </article>
         ))}
       </div>
     </section>
 
-    <section className="section-block page-width subsystem-grid">
-      <article className="subsystem-card">
-        <div className="subsystem-icon"><HardDrive size={21} strokeWidth={1.5} /></div>
-        <span className="section-index">STORAGE SUBSYSTEM</span><h3>Samba over the private mesh</h3>
-        <p>Cross-platform file access for macOS, Windows, Android, iOS, and iPadOS is reached privately over Tailscale.</p>
-        <div className="command-pair"><code>smb://&lt;private-node&gt;</code><code>\\&lt;private-node&gt;</code></div>
-      </article>
-      <article className="subsystem-card">
-        <div className="subsystem-icon"><Radio size={21} strokeWidth={1.5} /></div>
-        <span className="section-index">SERVICE SURFACE</span><h3>Small, inspectable workload</h3>
-        <p>The Compose-managed production surface is two constrained containers: Nginx for this static site and cloudflared for its public tunnel.</p>
-        <div className="service-lines"><span><i /> arch-server-docs</span><span><i /> cloudflared</span></div>
-      </article>
-      <article className="subsystem-card">
-        <div className="subsystem-icon"><Wrench size={21} strokeWidth={1.5} /></div>
-        <span className="section-index">OPERATIONS</span><h3>Local administration</h3>
-        <p>Network provisioning, file operations, device transfer, and system checks remain available from the terminal.</p>
-        <div className="tool-list"><code>wlctl</code><code>yazi</code><code>KDE Connect</code><code>network-status.sh</code></div>
-      </article>
+    <section className="section-block page-width machine-notebook">
+      <div className="notebook-intro">
+        <span className="section-index">FIELD NOTES</span>
+        <h2>The niche details I actually care about.</h2>
+        <p>The desktop was not erased to make a server. I kept the Arch system, removed the display as a dependency, and added only the services that gave the machine a useful second life.</p>
+        <Link to="/desktop" className="text-link">See the retained desktop setup <ArrowUpRight size={14} /></Link>
+      </div>
+      <dl className="machine-spec-list">
+        {machineNotes.map(([term, detail]) => <div key={term}><dt>{term}</dt><dd>{detail}</dd></div>)}
+      </dl>
+    </section>
+
+    <section className="section-block page-width tool-notes">
+      <div className="tool-notes-heading">
+        <Wrench size={21} strokeWidth={1.5} />
+        <div><span className="section-index">SMALL TOOLS, KEPT ON PURPOSE</span><h2>Useful beats impressive.</h2></div>
+      </div>
+      <div className="tool-note-list">
+        {smallTools.map(([tool, use]) => <p key={tool}><code>{tool}</code><span>{use}</span></p>)}
+      </div>
+      <div className="honest-footnotes">
+        <p><MonitorOff size={18} /><span><strong>Headless now.</strong> Closing the lid does not suspend the node.</span></p>
+        <p><Container size={18} /><span><strong>Deliberately small.</strong> The current Compose surface is only this site and its tunnel.</span></p>
+        <p><Wrench size={18} /><span><strong>Experiments get removed.</strong> WayVNC/noVNC and a local Ollama setup were tried, then deleted when they did not earn their overhead.</span></p>
+      </div>
     </section>
   </div>
 );

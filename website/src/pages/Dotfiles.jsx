@@ -2,15 +2,15 @@ import { ArrowUpRight, Code2, Gauge, Keyboard, Monitor, Settings2, Terminal } fr
 import hyprlandImg from "../../../assets/hyprland-redacted.jpg";
 
 const desktopLayers = [
-  ["01", "Hyprland", "Wayland compositor", "Tiling, animations, workspace control"],
-  ["02", "Waybar", "System surface", "Workspaces, telemetry, media state"],
-  ["03", "Zsh + Kitty", "Terminal layer", "Oh My Zsh, shell helpers, and remote administration"],
-  ["04", "Pywal", "Theme generator", "Wallpaper-derived colors shared across the desktop"],
-  ["05", "Wofi", "Application launcher", "A keyboard-first launcher tuned to the local theme"],
-  ["06", "CAVA", "Audio visualizer", "Shader-backed terminal visualizations retained in the dotfiles"],
-  ["07", "Yazi", "File operations", "Keyboard-first local and remote file management"],
-  ["08", "KDE Connect", "Device bridge", "Payload transfer and phone integration"],
-  ["09", "Hyprlock", "Local security", "Session locking when the display stack is active"],
+  ["01", "Hyprland", "Wayland compositor", "Dynamic tiling with 10 px inner gaps, 15 px outer gaps, and 20 px rounding"],
+  ["02", "Waybar", "System surface", "Workspaces and status modules inherit the active Pywal palette"],
+  ["03", "Zsh + Kitty", "Terminal layer", "Oh My Zsh, autosuggestions, syntax highlighting, z, sudo, and a Jesse Pinkman hello"],
+  ["04", "Pywal", "Theme generator", "Wallpaper colors are exported and reloaded across the session from the terminal"],
+  ["05", "Wofi", "Application launcher", "A frosted keyboard-first launcher whose prompt is simply: Yo, search it!"],
+  ["06", "CAVA", "Audio visualizer", "Custom eye_of_phi, northern_lights, and Winamp-line GLSL shaders"],
+  ["07", "Yazi", "File operations", "Keyboard-first file work with image previews, locally or through a remote shell"],
+  ["08", "KDE Connect", "Device bridge", "Quick file transfer and phone integration without making it a server dependency"],
+  ["09", "Hyprlock", "Local security", "Time, date, battery, network state, and a profile image on the lock screen"],
 ];
 
 const bindings = [
@@ -75,6 +75,11 @@ const Dotfiles = () => (
           <div><Gauge size={17} /><span><small>POWER PROFILE</small><code>./power-toggle.sh</code></span></div>
         </div>
       </div>
+    </section>
+
+    <section className="page-width dotfile-footnote">
+      <p><strong>The setup survives because it is versioned.</strong> <code>deploy.sh</code> recreates the configuration with symlinks, <code>push.sh</code> wraps the small Git sync ritual, and <code>power-toggle.sh</code> cycles performance, balanced, and power-saver modes. The public repository contains the exact files rather than a screenshot-only “rice”.</p>
+      <a href="https://github.com/tanmayhutt/hyprland-dotfiles" target="_blank" rel="noreferrer" className="text-link">Read the actual dotfiles <ArrowUpRight size={14} /></a>
     </section>
   </div>
 );

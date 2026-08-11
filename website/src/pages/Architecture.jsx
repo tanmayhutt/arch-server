@@ -50,12 +50,11 @@ const Architecture = () => (
         <div><span className="section-index">01 / BOUNDARIES</span><h2>Each route has a single job.</h2></div>
         <p>The architecture is intentionally small enough to audit and strict enough to keep public delivery away from private services.</p>
       </div>
-      <div className="plane-grid">
+      <div className="boundary-list">
         {planes.map(({ icon: Icon, title, tone, description, items }, index) => (
-          <article className={`plane-card plane-${tone}`} key={title}>
-            <div className="plane-card-top"><span>0{index + 1}</span><Icon size={21} strokeWidth={1.5} /></div>
-            <h3>{title}</h3>
-            <p>{description}</p>
+          <article className={`boundary-row plane-${tone}`} key={title}>
+            <div className="boundary-id"><span>0{index + 1}</span><Icon size={21} strokeWidth={1.5} /></div>
+            <div><h3>{title}</h3><p>{description}</p></div>
             <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
           </article>
         ))}

@@ -1,5 +1,5 @@
 import { useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 const globeNodes = [
   { lat: 37, lon: -122, size: 3.2 },
@@ -21,26 +21,20 @@ const routePairs = [
 const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 const toRadians = (degrees) => (degrees * Math.PI) / 180;
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-const easeOutCubic = (value) => 1 - (1 - value) ** 3;
-const easeInOutCubic = (value) => (
-  value < 0.5 ? 4 * value ** 3 : 1 - ((-2 * value + 2) ** 3) / 2
-);
-
 const createSpherePoints = (count) => Array.from({ length: count }, (_, index) => {
   const normalizedIndex = index / Math.max(1, count - 1);
   const y = 1 - normalizedIndex * 2;
   const horizontalRadius = Math.sqrt(Math.max(0, 1 - y * y));
   const angle = goldenAngle * index;
-  const seed = ((index * 73) % 101) / 101;
-
   return {
     x: Math.cos(angle) * horizontalRadius,
     y,
     z: Math.sin(angle) * horizontalRadius,
-    delay: seed * 0.2,
-    driftAngle: angle * 1.7 + seed * Math.PI,
-    drift: 0.28 + (((index * 47) % 97) / 97) * 0.72,
     size: 0.55 + (((index * 29) % 89) / 89) * 0.8,
+    offsetX: 0,
+    offsetY: 0,
+    velocityX: 0,
+    velocityY: 0,
   };
 });
 
@@ -50,9 +44,16 @@ const NetworkGlobe = ({ className = "" }) => {
   const frameRef = useRef(null);
   const ambientPointsRef = useRef([]);
   const spherePointsRef = useRef([]);
-  const pointerRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0, hovering: false });
+  const pointerRef = useRef({
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    localX: 0,
+    localY: 0,
+    active: false,
+  });
   const prefersReducedMotion = useReducedMotion();
-  const [interactionPhase, setInteractionPhase] = useState(prefersReducedMotion ? "static" : "idle");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -67,22 +68,11 @@ const NetworkGlobe = ({ className = "" }) => {
     let height = 0;
     let dpr = 1;
     let start = performance.now();
-    let sequenceStart = 0;
-    let sequenceActive = false;
-    let cooldownUntil = 0;
     let sceneCenterX = 0;
     let sceneCenterY = 0;
     let sceneRadius = 0;
     let isVisible = true;
     let isDocumentVisible = document.visibilityState === "visible";
-    let currentPhase = reducedMotion ? "static" : "idle";
-    setInteractionPhase(currentPhase);
-
-    const updatePhase = (nextPhase) => {
-      if (nextPhase === currentPhase) return;
-      currentPhase = nextPhase;
-      setInteractionPhase(nextPhase);
-    };
 
     const resize = () => {
       const rect = container.getBoundingClientRect();
@@ -150,34 +140,6 @@ const NetworkGlobe = ({ className = "" }) => {
       context.stroke();
     };
 
-    const triggerFragmentation = () => {
-      const now = performance.now();
-      if (reducedMotion || sequenceActive || now < cooldownUntil) return;
-      sequenceStart = now;
-      sequenceActive = true;
-      updatePhase("fragmenting");
-    };
-
-    const getFragmentation = (now) => {
-      if (!sequenceActive) return 0;
-
-      const sequenceTime = (now - sequenceStart) / 1000;
-      if (sequenceTime < 0.46) {
-        updatePhase("fragmenting");
-        return easeOutCubic(clamp(sequenceTime / 0.46));
-      }
-      if (sequenceTime < 0.6) return 1;
-      if (sequenceTime < 1.58) {
-        updatePhase("reforming");
-        return 1 - easeInOutCubic(clamp((sequenceTime - 0.6) / 0.98));
-      }
-
-      sequenceActive = false;
-      cooldownUntil = now + 260;
-      updatePhase("idle");
-      return 0;
-    };
-
     const draw = (now) => {
       const elapsed = (now - start) / 1000;
       const pointer = pointerRef.current;
@@ -191,10 +153,9 @@ const NetworkGlobe = ({ className = "" }) => {
       const radius = Math.min(width, height) * 0.31;
       const rotation = 1.05 + (reducedMotion ? 0 : elapsed * 0.055) + pointer.x * 0.18;
       const tilt = -0.18 + pointer.y * 0.12;
-      const cursorX = ((pointer.x + 1) / 2) * width;
-      const cursorY = ((pointer.y + 1) / 2) * height;
-      const fragmentation = getFragmentation(now);
-      const structureAlpha = 1 - fragmentation * 0.88;
+      const cursorX = pointer.localX;
+      const cursorY = pointer.localY;
+      const structureAlpha = 1;
 
       sceneCenterX = centerX;
       sceneCenterY = centerY;
@@ -208,7 +169,7 @@ const NetworkGlobe = ({ className = "" }) => {
       });
 
       const glow = context.createRadialGradient(centerX, centerY, radius * 0.15, centerX, centerY, radius * 1.45);
-      glow.addColorStop(0, `rgba(49, 145, 190, ${0.16 + fragmentation * 0.05})`);
+      glow.addColorStop(0, "rgba(49, 145, 190, 0.14)");
       glow.addColorStop(0.55, "rgba(22, 68, 91, 0.09)");
       glow.addColorStop(1, "rgba(0, 0, 0, 0)");
       context.fillStyle = glow;
@@ -216,7 +177,7 @@ const NetworkGlobe = ({ className = "" }) => {
       context.arc(centerX, centerY, radius * 1.45, 0, Math.PI * 2);
       context.fill();
 
-      context.strokeStyle = `rgba(107, 159, 184, ${0.16 - fragmentation * 0.08})`;
+      context.strokeStyle = "rgba(107, 159, 184, 0.14)";
       context.lineWidth = 1;
       context.beginPath();
       context.arc(centerX, centerY, radius, 0, Math.PI * 2);
@@ -243,34 +204,36 @@ const NetworkGlobe = ({ className = "" }) => {
         if (base.z < -0.14) return;
 
         const depth = clamp((base.z + 0.14) / 1.14);
-        const localFragmentation = clamp((fragmentation - particle.delay) / (1 - particle.delay));
-        const radialX = (base.x - centerX) / radius;
-        const radialY = (base.y - centerY) / radius;
-        const scatterDistance = radius * localFragmentation * (0.22 + particle.drift * 0.54);
-        const cursorDistance = Math.hypot(base.x - cursorX, base.y - cursorY);
-        const cursorInfluence = pointer.hovering ? clamp(1 - cursorDistance / (radius * 0.82)) : 0;
-        const cursorDx = base.x - cursorX;
-        const cursorDy = base.y - cursorY;
-        const cursorLength = Math.max(1, Math.hypot(cursorDx, cursorDy));
-        const driftX = Math.cos(particle.driftAngle) * radius * 0.13 * localFragmentation;
-        const driftY = Math.sin(particle.driftAngle) * radius * 0.13 * localFragmentation;
-        const repelDistance = radius * 0.22 * cursorInfluence * localFragmentation;
-        const offsetX = radialX * scatterDistance + driftX + (cursorDx / cursorLength) * repelDistance;
-        const offsetY = radialY * scatterDistance + driftY + (cursorDy / cursorLength) * repelDistance;
-        const particleX = base.x + offsetX;
-        const particleY = base.y + offsetY;
+        const particleXBeforeForce = base.x + particle.offsetX;
+        const particleYBeforeForce = base.y + particle.offsetY;
+        const cursorDx = particleXBeforeForce - cursorX;
+        const cursorDy = particleYBeforeForce - cursorY;
+        const cursorDistance = Math.max(0.01, Math.hypot(cursorDx, cursorDy));
+        const interactionRadius = Math.max(74, radius * 0.48);
 
-        if (localFragmentation > 0.06) {
-          context.strokeStyle = `rgba(139, 210, 237, ${localFragmentation * depth * 0.18})`;
-          context.lineWidth = 0.65;
-          context.beginPath();
-          context.moveTo(base.x + offsetX * 0.64, base.y + offsetY * 0.64);
-          context.lineTo(particleX, particleY);
-          context.stroke();
+        if (pointer.active && cursorDistance < interactionRadius && !reducedMotion) {
+          const influence = (1 - cursorDistance / interactionRadius) ** 2;
+          const force = 2.35 * influence;
+          particle.velocityX += (cursorDx / cursorDistance) * force;
+          particle.velocityY += (cursorDy / cursorDistance) * force;
+          particle.velocityX += (-cursorDy / cursorDistance) * force * 0.08;
+          particle.velocityY += (cursorDx / cursorDistance) * force * 0.08;
         }
 
-        const alpha = 0.1 + depth * 0.34 + localFragmentation * 0.32;
-        const pointSize = particle.size * (0.62 + depth * 0.58 + localFragmentation * 0.22);
+        if (!reducedMotion) {
+          particle.velocityX += -particle.offsetX * 0.018;
+          particle.velocityY += -particle.offsetY * 0.018;
+          particle.velocityX *= 0.9;
+          particle.velocityY *= 0.9;
+          particle.offsetX += particle.velocityX;
+          particle.offsetY += particle.velocityY;
+        }
+
+        const particleX = base.x + particle.offsetX;
+        const particleY = base.y + particle.offsetY;
+        const displacement = Math.hypot(particle.offsetX, particle.offsetY);
+        const alpha = 0.1 + depth * 0.36 + clamp(displacement / 70) * 0.2;
+        const pointSize = particle.size * (0.62 + depth * 0.58);
         context.fillStyle = `rgba(151, 211, 232, ${alpha})`;
         context.beginPath();
         context.arc(particleX, particleY, pointSize, 0, Math.PI * 2);
@@ -343,14 +306,6 @@ const NetworkGlobe = ({ className = "" }) => {
       context.stroke();
       context.setLineDash([]);
 
-      if (fragmentation > 0.04 && pointer.hovering) {
-        context.strokeStyle = `rgba(139, 210, 237, ${fragmentation * 0.24})`;
-        context.lineWidth = 0.8;
-        context.beginPath();
-        context.arc(cursorX, cursorY, radius * (0.08 + fragmentation * 0.12), 0, Math.PI * 2);
-        context.stroke();
-      }
-
       frameRef.current = isVisible && isDocumentVisible && !reducedMotion
         ? window.requestAnimationFrame(draw)
         : null;
@@ -362,21 +317,17 @@ const NetworkGlobe = ({ className = "" }) => {
       const localY = event.clientY - rect.top;
       pointerRef.current.targetX = (localX / rect.width - 0.5) * 2;
       pointerRef.current.targetY = (localY / rect.height - 0.5) * 2;
+      pointerRef.current.localX = localX;
+      pointerRef.current.localY = localY;
 
       const isInsideGlobe = Math.hypot(localX - sceneCenterX, localY - sceneCenterY) <= sceneRadius * 1.08;
-      if (isInsideGlobe && !pointerRef.current.hovering) triggerFragmentation();
-      pointerRef.current.hovering = isInsideGlobe;
+      pointerRef.current.active = isInsideGlobe;
     };
 
     const handlePointerLeave = () => {
       pointerRef.current.targetX = 0;
       pointerRef.current.targetY = 0;
-      pointerRef.current.hovering = false;
-    };
-
-    const handlePointerDown = (event) => {
-      updatePointer(event);
-      triggerFragmentation();
+      pointerRef.current.active = false;
     };
 
     const handleResize = () => {
@@ -410,7 +361,6 @@ const NetworkGlobe = ({ className = "" }) => {
     resizeObserver.observe(container);
     visibilityObserver.observe(container);
     container.addEventListener("pointermove", updatePointer);
-    container.addEventListener("pointerdown", handlePointerDown);
     container.addEventListener("pointerleave", handlePointerLeave);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     resize();
@@ -422,7 +372,6 @@ const NetworkGlobe = ({ className = "" }) => {
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
       container.removeEventListener("pointermove", updatePointer);
-      container.removeEventListener("pointerdown", handlePointerDown);
       container.removeEventListener("pointerleave", handlePointerLeave);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
@@ -434,7 +383,6 @@ const NetworkGlobe = ({ className = "" }) => {
     <div
       ref={containerRef}
       className={`network-globe ${className}`}
-      data-phase={interactionPhase}
       aria-label="Interactive point-field globe showing encrypted routes to the physical Arch Linux origin"
       role="img"
     >
