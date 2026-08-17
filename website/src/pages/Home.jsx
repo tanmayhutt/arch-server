@@ -9,6 +9,7 @@ import {
   HardDrive,
   Network,
   Server,
+  ShieldCheck,
   Terminal,
 } from "lucide-react";
 import NetworkGlobe from "@/components/NetworkGlobe";
@@ -105,6 +106,11 @@ const Home = () => (
         <article><HardDrive size={21} /><div><h3>Private storage</h3><p>Samba turns the internal SSD into a NAS for my Mac, phone, and other trusted devices over Tailscale.</p></div></article>
         <article><Terminal size={21} /><div><h3>Remote Linux machine</h3><p>I administer Arch, move files, and run tools from a private shell without needing the broken display. On an unenrolled device, <a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noreferrer">ssh.tanmaytiwari.me</a> opens the identity-gated browser terminal.</p></div></article>
         <article><Server size={21} /><div><h3>Self-hosted projects</h3><p>Docker keeps the public workloads isolated and repeatable. Today that includes this site and its Cloudflare tunnel.</p></div></article>
+      </div>
+      <div className="access-principle">
+        <ShieldCheck size={20} strokeWidth={1.5} />
+        <p><strong>Reachable from anywhere does not mean open to anyone.</strong> Every person should have a separate, revocable identity rather than a shared login, private key, or network enrollment key.</p>
+        <Link to="/server#trust-model" className="text-link">Read the access model <ArrowUpRight size={15} /></Link>
       </div>
     </section>
 

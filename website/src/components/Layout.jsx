@@ -18,17 +18,52 @@ const pageMeta = {
   "/about": ["About the project | arch-server", "How a broken laptop display led to a personal home server instead of discarded hardware."],
 };
 
+const siteOrigin = "https://arch-server.tanmaytiwari.me";
+
+const setMeta = (selector, attribute, value) => {
+  let element = document.head.querySelector(selector);
+  if (!element) {
+    element = document.createElement("meta");
+    const match = selector.match(/meta\[([^=]+)="([^"]+)"\]/);
+    if (match) element.setAttribute(match[1], match[2]);
+    document.head.appendChild(element);
+  }
+  element.setAttribute(attribute, value);
+};
+
 const Layout = () => {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   useLayoutEffect(() => {
-    window.scrollTo(0, 0);
+    const knownRoute = Boolean(pageMeta[pathname]);
     const [title, description] = pageMeta[pathname] || ["Page not found | arch-server", "This route does not exist on the arch-server project site."];
+    const canonicalUrl = `${siteOrigin}${knownRoute ? pathname : "/"}`;
     document.title = title;
     document.querySelector('meta[name="description"]')?.setAttribute("content", description);
-  }, [pathname]);
+    setMeta('meta[property="og:title"]', "content", title);
+    setMeta('meta[property="og:description"]', "content", description);
+    setMeta('meta[property="og:url"]', "content", canonicalUrl);
+    setMeta('meta[name="twitter:title"]', "content", title);
+    setMeta('meta[name="twitter:description"]', "content", description);
+    setMeta('meta[name="robots"]', "content", knownRoute ? "index, follow" : "noindex, follow");
+
+    let canonical = document.head.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", canonicalUrl);
+
+    if (hash) {
+      window.requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView());
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname, hash]);
 
   return (
     <div className="app-shell">
+    <a className="skip-link" href="#main-content">Skip to content</a>
     <nav className="site-nav">
       <div className="nav-inner page-width">
         <Link to="/" className="brand-mark" aria-label="arch-server home">
@@ -49,7 +84,7 @@ const Layout = () => {
       </div>
     </nav>
 
-    <main><Outlet /></main>
+    <main id="main-content"><Outlet /></main>
 
     <footer className="site-footer">
       <div className="page-width footer-inner">

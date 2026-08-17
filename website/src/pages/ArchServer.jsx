@@ -3,12 +3,15 @@ import {
   ArrowUpRight,
   Code2,
   Container,
+  Fingerprint,
   HardDrive,
   KeyRound,
   MonitorOff,
   Network,
   Server,
+  ShieldCheck,
   Terminal,
+  UserRoundCheck,
   Wrench,
 } from "lucide-react";
 
@@ -34,6 +37,13 @@ const smallTools = [
   ["zoxide + ripgrep", "getting around and finding things quickly"],
   ["network-status.sh", "a small, readable network check"],
   ["battery.sh / whoami.sh", "tiny local status helpers"],
+];
+
+const sharingRules = [
+  [Fingerprint, "Cloudflare Access identity", "Personal, not shared", "An allowed identity can start the browser-terminal flow from anywhere. Another person should use their own approved identity, never my login or active session."],
+  [UserRoundCheck, "Tailscale access", "Invite or share narrowly", "For ongoing access, I can invite a person with an explicit role or share only this machine. Access controls should limit the services they actually need."],
+  [KeyRound, "SSH credential", "One key per person", "A separate SSH key can be removed without disrupting mine. Private keys, passwords, and reusable Tailscale auth keys are never passed around as invitations."],
+  [ShieldCheck, "Cloudflare account", "Administrator only", "The Cloudflare account controls DNS, tunnels, and Access policies. It is control-plane access, not a credential for guests or collaborators."],
 ];
 
 const ArchServer = () => (
@@ -101,6 +111,26 @@ const ArchServer = () => (
           <article key={route}>
             <span>0{index + 1}</span><Icon size={20} strokeWidth={1.5} />
             <div><small>{situation}</small><h3>{route}</h3></div><p>{detail}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section className="section-block page-width trust-model" id="trust-model">
+      <div className="trust-model-intro">
+        <span className="section-index">SHARING ACCESS SAFELY</span>
+        <h2>A person gets an identity, not a copy of mine.</h2>
+        <p>Cloudflare and Tailscale make the server reachable from anywhere, but reachability is not permission. Each layer still decides who can continue, and every person should be independently removable.</p>
+        <div className="trust-answer">
+          <ShieldCheck size={20} strokeWidth={1.5} />
+          <p><strong>The login screen is intentional.</strong> It is the privacy boundary that turns a public hostname into a private terminal door.</p>
+        </div>
+      </div>
+      <div className="trust-rule-list">
+        {sharingRules.map(([Icon, credential, rule, detail], index) => (
+          <article key={credential}>
+            <div className="trust-rule-id"><span>0{index + 1}</span><Icon size={19} strokeWidth={1.5} /></div>
+            <div><small>{credential}</small><h3>{rule}</h3><p>{detail}</p></div>
           </article>
         ))}
       </div>

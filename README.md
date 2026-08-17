@@ -96,16 +96,16 @@ The web container uses a multi-stage Node.js and Nginx build, a memory limit, a 
 
 ## Deployment
 
-The workflow in [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) runs when the website or deployment workflow changes on `main`.
+The workflow in [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) runs when the website, Compose definition, or deployment workflow changes on `main`. Concurrent runs queue instead of interrupting an active production deployment.
 
-1. GitHub checks out the repository.
-2. The runner joins the private tailnet using a repository secret.
+1. GitHub checks out the repository with read-only repository permissions.
+2. The runner temporarily joins the private tailnet using a repository secret.
 3. The SSH action connects to the node over that private network.
 4. The repository is cloned or updated under the server's services directory.
 5. The tunnel token is written to a local, ignored environment file.
-6. Docker Compose rebuilds and replaces the public workload.
+6. Docker Compose builds the changed image and converges the running workload without an unconditional container teardown.
 
-A change to root infrastructure files such as `docker-compose.yml` does not currently trigger this path unless the workflow filter is expanded.
+The workflow pins released action versions rather than moving `master` branches. A future credential migration should replace the current Tailscale auth key with a tagged OAuth or workload-identity flow so each CI runner remains short-lived and narrowly authorized.
 
 ## Hardware profile
 
@@ -134,6 +134,18 @@ An identity-gated Cloudflare Access application provides a second remote path fo
 ### Browser terminal
 
 Cloudflare browser rendering can expose the same protected shell in a modern browser when the access policy permits it. This provides a no-install recovery path without publishing a direct origin endpoint.
+
+### Giving another person access
+
+Reachability from anywhere does not make the shell public, but credentials must remain personal:
+
+- Do not share the Cloudflare account login. It can change DNS, tunnels, and Access policy.
+- Do not share an existing Cloudflare identity session, Tailscale auth key, SSH private key, or account password.
+- For browser access, allow the person's own identity in a narrow Cloudflare Access policy with MFA and a short session.
+- For ongoing private-network access, invite the person with restricted access controls or share only the required Tailscale machine or service.
+- Give each operator a separate SSH key so access can be revoked without rotating another person's credentials.
+
+Cloudflare Access controls who may approach the SSH service. The origin's SSH authentication and authorization still determine what that approved person can do on the machine.
 
 ## Samba NAS
 
@@ -210,6 +222,8 @@ The frontend uses React, Vite, Tailwind CSS, Motion, selected Magic UI interacti
 - No access tokens, private keys, internal addresses, SSIDs, usernames, or share paths should be committed.
 - Public diagrams describe boundaries and flows, not usable connection details.
 - Static interface labels represent documented configuration, not live monitoring.
+- The production Nginx response sets a restrictive content policy, framing protection, content-type protection, referrer policy, and disables unused browser permissions.
+- Shared access should use separate, revocable identities and keys. Administrator accounts and enrollment secrets are never guest credentials.
 
 ## Roadmap
 

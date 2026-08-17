@@ -14,7 +14,7 @@ WORKDIR /app/website
 RUN npm run build
 
 # Stage 2: Serve with Nginx
-FROM nginx:1.25-alpine
+FROM nginx:1.30.4-alpine3.24
 COPY --from=build /app/website/dist /usr/share/nginx/html
 # Note: nginx.conf is inside the website folder in the root context
 COPY website/nginx.conf /etc/nginx/conf.d/default.conf
