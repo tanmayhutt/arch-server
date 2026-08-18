@@ -3,6 +3,8 @@
 !website/**
 !assets/
 !assets/**
+!monitor/
+!monitor/**
 
 website/node_modules
 website/dist

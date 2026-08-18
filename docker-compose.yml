@@ -12,6 +12,31 @@ services:
         limits:
           memory: 512M
           cpus: '0.5'
+    depends_on:
+      - telemetry
+
+  telemetry:
+    build:
+      context: .
+      dockerfile: monitor/Dockerfile
+    container_name: arch-server-telemetry
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - DEPLOY_COMMIT=${DEPLOY_COMMIT:-unknown}
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - ./website:/host/storage:ro
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
 
   cloudflared:
     image: cloudflare/cloudflared:latest
