@@ -99,13 +99,13 @@ The web container uses a multi-stage Node.js and Nginx build, a memory limit, a 
 The workflow in [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) runs when the website, Compose definition, or deployment workflow changes on `main`. Concurrent runs queue instead of interrupting an active production deployment.
 
 1. GitHub checks out the repository with read-only repository permissions.
-2. The runner temporarily joins the private tailnet using a repository secret.
+2. GitHub issues the job a short-lived OIDC identity token. Tailscale verifies the configured repository identity and admits the runner as an ephemeral `tag:ci` node.
 3. The SSH action connects to the node over that private network.
 4. The repository is cloned or updated under the server's services directory.
 5. The tunnel token is written to a local, ignored environment file.
 6. Docker Compose builds the changed image and converges the running workload without an unconditional container teardown.
 
-The workflow pins released action versions rather than moving `master` branches. A future credential migration should replace the current Tailscale auth key with a tagged OAuth or workload-identity flow so each CI runner remains short-lived and narrowly authorized.
+The workflow pins released action versions rather than moving `master` branches. It uses Tailscale workload identity federation rather than a reusable tailnet auth key. The intended tailnet policy permits `tag:ci` to reach only TCP port 22 on the tagged Arch server. See [`docs/tailscale-oidc-migration.md`](./docs/tailscale-oidc-migration.md) for the one-time Tailscale and GitHub configuration.
 
 ## Hardware profile
 
