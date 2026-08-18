@@ -1,6 +1,8 @@
 **
 !website/
 !website/**
+!assets/
+!assets/**
 
 website/node_modules
 website/dist
