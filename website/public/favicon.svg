@@ -1,23 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" fill="#0a0c10" rx="15"/>
-  <!-- Server Rack Frame -->
-  <rect x="25" y="20" width="50" height="60" fill="none" stroke="#58a6ff" stroke-width="4" rx="4"/>
-  
-  <!-- Server 1 -->
-  <rect x="30" y="30" width="40" height="10" fill="#58a6ff" rx="2"/>
-  <!-- Server 1 lights -->
-  <circle cx="35" cy="35" r="2" fill="#0a0c10"/>
-  <circle cx="42" cy="35" r="2" fill="#0a0c10"/>
-  
-  <!-- Server 2 -->
-  <rect x="30" y="45" width="40" height="10" fill="#58a6ff" rx="2"/>
-  <!-- Server 2 lights -->
-  <circle cx="35" cy="50" r="2" fill="#0a0c10"/>
-  <circle cx="42" cy="50" r="2" fill="#0a0c10"/>
-  
-  <!-- Server 3 -->
-  <rect x="30" y="60" width="40" height="10" fill="#58a6ff" rx="2"/>
-  <!-- Server 3 lights -->
-  <circle cx="35" cy="65" r="2" fill="#0a0c10"/>
-  <circle cx="42" cy="65" r="2" fill="#0a0c10"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .paper{fill:#f1f3ef}.frame{fill:#f8faf6;stroke:#263b3e}.screen{fill:#dfe9e5}.route{fill:none;stroke:#2f708b}.node{fill:#2f708b}
+    @media (prefers-color-scheme:dark){.paper{fill:#171c1c}.frame{fill:#202827;stroke:#d7e2de}.screen{fill:#111817}.route{stroke:#8fc5d7}.node{fill:#8fc5d7}}
+  </style>
+  <rect class="paper" width="64" height="64" rx="13"/>
+  <rect class="frame" x="14" y="12" width="36" height="29" rx="4" stroke-width="3"/>
+  <rect class="screen" x="19" y="17" width="26" height="19" rx="1.5"/>
+  <path class="route" d="M22 29c5-8 10 5 15-3 2-3 3-4 6-4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle class="node" cx="22" cy="29" r="2.5"/><circle class="node" cx="43" cy="22" r="2.5"/>
+  <path class="frame" d="M10 47h44l-4 6H14z" stroke-width="3" stroke-linejoin="round"/>
 </svg>
