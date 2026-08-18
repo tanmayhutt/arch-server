@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import NetworkGlobe from "@/components/NetworkGlobe";
 import InfrastructureMap from "@/components/InfrastructureMap";
-import ServerStatus from "@/components/ServerStatus";
 import fastfetchImg from "../../../assets/fastfetch-sanitized.jpg";
 
 const requestStory = [
@@ -114,8 +113,6 @@ const Home = () => (
         <Link to="/server#trust-model" className="text-link">Read the access model <ArrowUpRight size={15} /></Link>
       </div>
     </section>
-
-    <ServerStatus />
 
     <section className="section-block page-width home-story-bridge">
       <div className="story-bridge-copy">

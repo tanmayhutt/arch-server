@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import ArchServer from './pages/ArchServer';
 import Dotfiles from './pages/Dotfiles';
 import About from './pages/About';
+import Status from './pages/Status';
 import NotFound from './pages/NotFound';
 
 import Architecture from './pages/Architecture';
@@ -17,6 +18,7 @@ function App() {
         <Route path="desktop" element={<Dotfiles />} />
         <Route path="architecture" element={<Architecture />} />
         <Route path="about" element={<About />} />
+        <Route path="status" element={<Status />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

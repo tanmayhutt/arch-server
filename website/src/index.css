@@ -997,6 +997,8 @@ body { line-height: 1.55; }
 
 /* A restrained live server readout with sensitive operational details withheld. */
 .status-section { display: grid; grid-template-columns: 0.72fr 1.28fr; gap: clamp(50px, 8vw, 108px); align-items: start; }
+.status-page { min-height: calc(100vh - 160px); padding-bottom: 110px; }
+.status-page .status-section { padding-top: clamp(72px, 9vw, 112px); }
 .status-intro { position: sticky; top: 112px; }
 .status-intro h2 { margin: 14px 0 0; color: var(--text); font-size: clamp(31px, 4vw, 48px); font-weight: 550; line-height: 1.06; letter-spacing: -0.045em; }
 .status-intro p { margin: 23px 0 0; color: var(--muted); font-size: 15px; line-height: 1.75; }
