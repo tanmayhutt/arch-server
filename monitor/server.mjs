@@ -46,7 +46,7 @@ const diskPercent = async () => {
 const temperature = async () => {
   try {
     const zones = await readdir(`${sysRoot}/class/thermal`, { withFileTypes: true });
-    const values = await Promise.all(zones.filter((entry) => entry.isDirectory() && entry.name.startsWith("thermal_zone")).map(async (entry) => {
+    const values = await Promise.all(zones.filter((entry) => entry.name.startsWith("thermal_zone")).map(async (entry) => {
       try { return Number(await readText(`${sysRoot}/class/thermal/${entry.name}/temp`)) / 1000; } catch { return null; }
     }));
     const plausible = values.filter((value) => value >= 10 && value <= 110);
@@ -57,7 +57,7 @@ const temperature = async () => {
 const battery = async () => {
   try {
     const supplies = await readdir(`${sysRoot}/class/power_supply`, { withFileTypes: true });
-    const entry = supplies.find((item) => item.isDirectory() && item.name.startsWith("BAT"));
+    const entry = supplies.find((item) => item.name.startsWith("BAT"));
     if (!entry) return { percent: null, state: null };
     const base = `${sysRoot}/class/power_supply/${entry.name}`;
     return { percent: Number(await readText(`${base}/capacity`)), state: await readText(`${base}/status`) };
