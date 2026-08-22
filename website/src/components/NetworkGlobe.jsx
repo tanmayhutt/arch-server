@@ -39,6 +39,19 @@ const serverPoint = (index) => {
   return [x, -1.72 + rack * 0.86, z];
 };
 
+const archPoint = (index) => {
+  const y = -1.72 + random(index, 11) * 3.72;
+  const outerHalf = Math.max(0.05, (2 - y) * 0.61);
+  const innerHalf = y < 0.84 ? Math.max(0, (0.84 - y) * 0.35) : 0;
+  const side = random(index, 12) < 0.5 ? -1 : 1;
+  const fill = random(index, 13);
+  const x = innerHalf > 0
+    ? side * (innerHalf + fill * (outerHalf - innerHalf))
+    : (fill * 2 - 1) * outerHalf;
+  const crownCut = y > 1.18 && Math.abs(x) < (y - 1.18) * 0.16;
+  return [crownCut ? x + side * 0.17 : x, y, (random(index, 14) - 0.5) * 0.22];
+};
+
 const networkPoint = (index) => {
   const phi = Math.acos(1 - 2 * ((index + 0.5) / COUNT));
   const theta = Math.PI * (1 + Math.sqrt(5)) * index;
@@ -59,8 +72,9 @@ const buildShape = (factory) => {
 
 const stages = [
   ["01", "Broken display", "The screen stopped being a dependable way into the machine."],
-  ["02", "Headless node", "Arch kept running, so the laptop became a small always-on server."],
-  ["03", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
+  ["02", "Arch survives", "The display failed. The customized Arch system underneath it did not."],
+  ["03", "Headless node", "Arch kept running, so the laptop became a small always-on server."],
+  ["04", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
 ];
 
 const NetworkGlobe = () => {
@@ -69,7 +83,7 @@ const NetworkGlobe = () => {
   const [active, setActive] = useState(0);
   const [cycleKey, setCycleKey] = useState(0);
   const shouldReduceMotion = useReducedMotion();
-  const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
+  const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(archPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
@@ -114,6 +128,34 @@ const NetworkGlobe = () => {
     const cloud = new THREE.Points(geometry, material);
     scene.add(cloud);
 
+    const routeGroup = new THREE.Group();
+    const routeMaterials = [];
+    const routeColors = [0x315f73, 0x477b68, 0xa66a42];
+    const routeCurves = [
+      [[-2.05, 0.62, 0.25], [-0.72, 2.75, 0.72], [1.4, 1.78, 0.2]],
+      [[-1.95, -0.78, 0.28], [-0.35, -2.8, 0.85], [1.78, -1.32, 0.12]],
+      [[1.4, 1.78, 0.2], [2.9, 0.55, 0.72], [1.78, -1.32, 0.12]],
+    ];
+    routeCurves.forEach(([start, control, end], index) => {
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(...start),
+        new THREE.Vector3(...control),
+        new THREE.Vector3(...end),
+      );
+      const routeGeometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(52));
+      const routeMaterial = new THREE.LineBasicMaterial({ color: routeColors[index], transparent: true, opacity: 0 });
+      routeMaterials.push(routeMaterial);
+      routeGroup.add(new THREE.Line(routeGeometry, routeMaterial));
+    });
+    const nodeGeometry = new THREE.BufferGeometry();
+    nodeGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+      -2.05, 0.62, 0.25, -1.95, -0.78, 0.28, 1.4, 1.78, 0.2, 1.78, -1.32, 0.12,
+    ], 3));
+    const nodeMaterial = new THREE.PointsMaterial({ color: 0x274f60, size: 0.13, transparent: true, opacity: 0, depthWrite: false });
+    routeMaterials.push(nodeMaterial);
+    routeGroup.add(new THREE.Points(nodeGeometry, nodeMaterial));
+    scene.add(routeGroup);
+
     const pointer = { x: 20, y: 20, active: false };
     const resize = () => {
       const { width, height } = mount.getBoundingClientRect();
@@ -136,11 +178,16 @@ const NetworkGlobe = () => {
 
     let frame = 0;
     let visible = true;
+    let previousTime = performance.now();
+    let routeOpacity = 0;
     const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }, { rootMargin: "120px" });
     visibilityObserver.observe(mount);
     const render = () => {
       frame = window.requestAnimationFrame(render);
       if (!visible) return;
+      const now = performance.now();
+      const delta = Math.min((now - previousTime) / 16.667, 2);
+      previousTime = now;
       const target = shapes[activeRef.current];
       const attribute = geometry.attributes.position;
       const array = attribute.array;
@@ -152,29 +199,34 @@ const NetworkGlobe = () => {
           array[offset + 2] = target[offset + 2];
           continue;
         }
-        velocities[offset] += (target[offset] - array[offset]) * 0.026;
-        velocities[offset + 1] += (target[offset + 1] - array[offset + 1]) * 0.026;
-        velocities[offset + 2] += (target[offset + 2] - array[offset + 2]) * 0.026;
+        velocities[offset] += (target[offset] - array[offset]) * 0.026 * delta;
+        velocities[offset + 1] += (target[offset + 1] - array[offset + 1]) * 0.026 * delta;
+        velocities[offset + 2] += (target[offset + 2] - array[offset + 2]) * 0.026 * delta;
         if (pointer.active) {
           const dx = array[offset] - pointer.x;
           const dy = array[offset + 1] - pointer.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance < 1.15) {
             const force = (1.15 - distance) * 0.042;
-            velocities[offset] += (dx / Math.max(distance, 0.08)) * force;
-            velocities[offset + 1] += (dy / Math.max(distance, 0.08)) * force;
-            velocities[offset + 2] += (random(index, 10) - 0.5) * force;
+            velocities[offset] += (dx / Math.max(distance, 0.08)) * force * delta;
+            velocities[offset + 1] += (dy / Math.max(distance, 0.08)) * force * delta;
+            velocities[offset + 2] += (random(index, 10) - 0.5) * force * delta;
           }
         }
-        velocities[offset] *= 0.88;
-        velocities[offset + 1] *= 0.88;
-        velocities[offset + 2] *= 0.88;
-        array[offset] += velocities[offset];
-        array[offset + 1] += velocities[offset + 1];
-        array[offset + 2] += velocities[offset + 2];
+        const damping = Math.pow(0.88, delta);
+        velocities[offset] *= damping;
+        velocities[offset + 1] *= damping;
+        velocities[offset + 2] *= damping;
+        array[offset] += velocities[offset] * delta;
+        array[offset + 1] += velocities[offset + 1] * delta;
+        array[offset + 2] += velocities[offset + 2] * delta;
       }
-      cloud.rotation.y += pointer.active && activeRef.current === 2 ? 0.0018 : 0;
-      cloud.rotation.x += ((pointer.active ? pointer.y * -0.018 : 0) - cloud.rotation.x) * 0.025;
+      const connected = activeRef.current === stages.length - 1;
+      routeOpacity += ((connected ? 0.72 : 0) - routeOpacity) * 0.055 * delta;
+      routeMaterials.forEach((routeMaterial, index) => { routeMaterial.opacity = index === routeMaterials.length - 1 ? routeOpacity : routeOpacity * 0.78; });
+      cloud.rotation.y += pointer.active && connected ? 0.0018 * delta : 0;
+      cloud.rotation.x += ((pointer.active ? pointer.y * -0.018 : 0) - cloud.rotation.x) * 0.025 * delta;
+      routeGroup.rotation.copy(cloud.rotation);
       attribute.needsUpdate = true;
       renderer.render(scene, camera);
     };
@@ -187,6 +239,8 @@ const NetworkGlobe = () => {
       mount.removeEventListener("pointerleave", onPointerLeave);
       geometry.dispose();
       material.dispose();
+      routeGroup.traverse((object) => { object.geometry?.dispose(); });
+      routeMaterials.forEach((routeMaterial) => routeMaterial.dispose());
       renderer.dispose();
       renderer.domElement.remove();
     };
@@ -195,7 +249,7 @@ const NetworkGlobe = () => {
   return (
     <div className="machine-scene">
       <div ref={mountRef} className="machine-scene-canvas" aria-hidden="true" />
-      {active === 2 && (
+      {active === stages.length - 1 && (
         <div className="scene-route-labels" aria-hidden="true">
           <span className="scene-route scene-route-public">Cloudflare<small>public ingress</small></span>
           <span className="scene-route scene-route-private">Tailscale<small>private admin</small></span>
