@@ -79,7 +79,14 @@ const ServerStatus = ({ compact = false }) => {
           <button type="button" onClick={runCheck} disabled={check.state === "checking"}><RefreshCw size={14} /> Refresh snapshot</button>
         </div>
         <div className="live-signals">
-          <div className="live-signals-heading"><Server size={18} /><div><span>COARSE HOST TELEMETRY</span><h3>What the machine is doing now</h3></div></div>
+          <div className="live-signals-heading">
+            <Server size={18} />
+            <div><span>COARSE HOST TELEMETRY</span><h3>What the machine is doing now</h3></div>
+            <button type="button" className="live-refresh" onClick={runCheck} disabled={check.state === "checking"} aria-label="Refresh live machine telemetry">
+              <RefreshCw size={14} className={check.state === "checking" ? "is-spinning" : ""} />
+              {check.state === "checking" ? "Refreshing" : "Refresh"}
+            </button>
+          </div>
           <ul>{liveSignals.map(([Icon, label, value]) => <li key={label}><Icon size={15} /><span>{label}</span><strong>{value}</strong></li>)}</ul>
           <div className="status-traces" aria-label="Resource history collected during this browser visit">
             <MetricTrace label="CPU / this visit" value={metrics?.cpuPercent ?? "–"} unit={metrics?.cpuPercent == null ? "" : "%"} values={history.cpu} tone="public" />

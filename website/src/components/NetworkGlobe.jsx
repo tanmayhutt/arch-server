@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
 
-const COUNT = 960;
+const COUNT = 1800;
+const STAGE_DURATION = 5600;
 const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
 
 const random = (index, salt = 0) => {
@@ -11,24 +12,31 @@ const random = (index, salt = 0) => {
 };
 
 const laptopPoint = (index) => {
-  const section = index % 10;
+  const section = index % 16;
   const t = random(index, 1);
-  if (section < 7) {
+  if (section < 6) {
     const edge = index % 4;
     if (edge === 0) return [-2.25 + t * 4.5, 1.55, random(index, 2) * 0.12];
     if (edge === 1) return [2.25, -1.15 + t * 2.7, random(index, 2) * 0.12];
     if (edge === 2) return [2.25 - t * 4.5, -1.15, random(index, 2) * 0.12];
     return [-2.25, 1.55 - t * 2.7, random(index, 2) * 0.12];
   }
-  return [-2.6 + t * 5.2, -1.35 - random(index, 3) * 0.75, (random(index, 4) - 0.5) * 1.4];
+  if (section < 12) {
+    return [-1.98 + t * 3.96, -0.92 + random(index, 3) * 2.16, (random(index, 4) - 0.5) * 0.06];
+  }
+  const depth = random(index, 4);
+  return [-2.65 + t * 5.3, -1.34 - depth * 0.72, (depth - 0.5) * 1.55];
 };
 
 const serverPoint = (index) => {
-  const rack = index % 4;
-  const angle = random(index, 5) * Math.PI * 2;
-  const radius = 1.05 + random(index, 6) * 0.22;
-  const y = -1.65 + rack * 1.05 + (random(index, 7) - 0.5) * 0.35;
-  return [Math.cos(angle) * radius, y, Math.sin(angle) * radius * 0.65];
+  const rack = index % 5;
+  const face = index % 8;
+  const x = -1.28 + random(index, 5) * 2.56;
+  const y = -1.72 + rack * 0.86 + random(index, 6) * 0.48;
+  const z = (random(index, 7) - 0.5) * 1.18;
+  if (face < 4) return [x, y, face % 2 ? 0.58 : -0.58];
+  if (face < 6) return [face % 2 ? 1.28 : -1.28, y, z];
+  return [x, -1.72 + rack * 0.86, z];
 };
 
 const networkPoint = (index) => {
@@ -59,10 +67,25 @@ const NetworkGlobe = () => {
   const mountRef = useRef(null);
   const activeRef = useRef(0);
   const [active, setActive] = useState(0);
+  const [cycleKey, setCycleKey] = useState(0);
   const shouldReduceMotion = useReducedMotion();
   const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
+
+  useEffect(() => {
+    if (shouldReduceMotion) return undefined;
+    const timer = window.setTimeout(() => {
+      setActive((current) => (current + 1) % stages.length);
+      setCycleKey((current) => current + 1);
+    }, STAGE_DURATION);
+    return () => window.clearTimeout(timer);
+  }, [active, cycleKey, shouldReduceMotion]);
+
+  const selectStage = (index) => {
+    setActive(index);
+    setCycleKey((current) => current + 1);
+  };
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -87,7 +110,7 @@ const NetworkGlobe = () => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    const material = new THREE.PointsMaterial({ size: 0.055, sizeAttenuation: true, transparent: true, opacity: 0.88, vertexColors: true, depthWrite: false });
+    const material = new THREE.PointsMaterial({ size: 0.047, sizeAttenuation: true, transparent: true, opacity: 0.9, vertexColors: true, depthWrite: false });
     const cloud = new THREE.Points(geometry, material);
     scene.add(cloud);
 
@@ -182,12 +205,13 @@ const NetworkGlobe = () => {
       )}
       <div className="scene-stage-picker" role="group" aria-label="The laptop's transformation">
         {stages.map(([number, title, detail], index) => (
-          <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => setActive(index)} aria-pressed={active === index}>
+          <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => selectStage(index)} aria-pressed={active === index}>
             <span>{number}</span><strong>{title}</strong><small>{detail}</small>
+            {active === index && !shouldReduceMotion && <span key={`${active}-${cycleKey}`} className="stage-progress" aria-hidden="true" />}
           </button>
         ))}
       </div>
-      <p className="scene-instruction">Move across the particles to disturb them. They rebuild around the selected state.</p>
+      <p className="scene-instruction">The story advances automatically. Select a stage or move through the particles to interrupt it.</p>
     </div>
   );
 };
