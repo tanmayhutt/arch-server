@@ -1,159 +1,55 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useState } from "react";
+
+const routes = {
+  public: {
+    label: "Public site",
+    note: "A visitor reaches Cloudflare. The server's outbound tunnel carries the accepted request to Nginx.",
+    nodes: ["Browser", "Cloudflare", "cloudflared", "Nginx", "React"],
+  },
+  private: {
+    label: "Private admin",
+    note: "An enrolled device reaches SSH and Samba over the private Tailscale mesh, not through the public website.",
+    nodes: ["My device", "Tailscale", "WireGuard", "OpenSSH", "Arch"],
+  },
+  deploy: {
+    label: "Deployment",
+    note: "A GitHub runner receives a short-lived identity, joins as tag:ci, then reaches only SSH on the server.",
+    nodes: ["Git push", "Actions", "OIDC", "SSH", "Compose"],
+  },
+};
 
 const InfrastructureMap = () => {
-  const mapRef = useRef(null);
-  const updateFrameRef = useRef(null);
-  const pointerTargetRef = useRef({ x: 0, y: 0 });
-  const [pointer, setPointer] = useState({ x: 0, y: 0 });
-  const shouldReduceMotion = useReducedMotion();
-
-  useEffect(() => () => {
-    if (updateFrameRef.current !== null) window.cancelAnimationFrame(updateFrameRef.current);
-  }, []);
-
-  const paths = useMemo(() => {
-    const bendX = pointer.x * 22;
-    const bendY = pointer.y * 18;
-    return {
-      publicA: `M 92 112 C ${185 + bendX} ${58 + bendY}, ${238 + bendX} ${58 + bendY}, 330 112`,
-      publicB: `M 430 112 C ${515 + bendX} ${76 + bendY}, ${566 + bendX} ${76 + bendY}, 646 112`,
-      publicC: `M 746 112 C ${824 + bendX} ${112 + bendY}, ${835 + bendX} ${200 + bendY}, 866 246`,
-      privateA: `M 92 386 C ${188 - bendX} ${442 - bendY}, ${245 - bendX} ${442 - bendY}, 330 386`,
-      privateB: `M 430 386 C ${595 - bendX} ${386 - bendY}, ${706 - bendX} ${346 - bendY}, 866 275`,
-      deploy: `M 378 280 C ${382 + bendX} ${314 + bendY}, ${382 + bendX} ${336 + bendY}, 380 356`,
-      deployB: `M 430 386 C ${500 + bendX} ${372 + bendY}, ${572 + bendX} ${372 + bendY}, 646 386`,
-      deployC: `M 746 386 C ${810 - bendX} ${374 - bendY}, ${840 - bendX} ${324 - bendY}, 866 282`,
-    };
-  }, [pointer]);
-
-  const handlePointerMove = (event) => {
-    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-    const rect = mapRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    pointerTargetRef.current = {
-      x: ((event.clientX - rect.left) / rect.width - 0.5) * 2,
-      y: ((event.clientY - rect.top) / rect.height - 0.5) * 2,
-    };
-    if (updateFrameRef.current !== null) return;
-    updateFrameRef.current = window.requestAnimationFrame(() => {
-      setPointer(pointerTargetRef.current);
-      updateFrameRef.current = null;
-    });
-  };
-
-  const handlePointerLeave = () => {
-    if (updateFrameRef.current !== null) {
-      window.cancelAnimationFrame(updateFrameRef.current);
-      updateFrameRef.current = null;
-    }
-    pointerTargetRef.current = { x: 0, y: 0 };
-    setPointer({ x: 0, y: 0 });
-  };
+  const [active, setActive] = useState("public");
+  const route = routes[active];
 
   return (
-    <div
-      ref={mapRef}
-      className="infrastructure-map"
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-    >
-      <svg viewBox="0 0 1000 500" role="img" aria-labelledby="map-title map-description">
-        <title id="map-title">Interactive arch-server network architecture</title>
-        <desc id="map-description">
-          Public traffic passes through Cloudflare and an outbound tunnel. Private administration passes through Tailscale. Both terminate at the physical Arch Linux server.
-        </desc>
-        <defs>
-          <linearGradient id="host-fill" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#12212a" />
-            <stop offset="1" stopColor="#080d11" />
-          </linearGradient>
-        </defs>
-
-        <g className="map-grid">
-          {Array.from({ length: 11 }, (_, index) => <line key={`v-${index}`} x1={index * 100} x2={index * 100} y1="0" y2="500" />)}
-          {Array.from({ length: 6 }, (_, index) => <line key={`h-${index}`} x1="0" x2="1000" y1={index * 100} y2={index * 100} />)}
-        </g>
-
-        <g className="route route-public">
-          {Object.entries(paths).slice(0, 3).map(([key, path], index) => (
-            <g key={key}>
-              <path id={key} d={path} />
-              {!shouldReduceMotion && <circle r="2.4">
-                <animateMotion dur={`${2.8 + index * 0.45}s`} repeatCount="indefinite" path={path} />
-              </circle>}
-            </g>
-          ))}
-        </g>
-
-        <g className="route route-private">
-          {[paths.privateA, paths.privateB].map((path, index) => (
-            <g key={`private-${index}`}>
-              <path d={path} />
-              {!shouldReduceMotion && <circle r="2.4">
-                <animateMotion dur={`${3.2 + index * 0.5}s`} repeatCount="indefinite" path={path} />
-              </circle>}
-            </g>
-          ))}
-        </g>
-
-        <g className="route route-deploy">
-          {[paths.deploy, paths.deployB, paths.deployC].map((path, index) => (
-            <g key={`deploy-${index}`}>
-              <path d={path} />
-              {!shouldReduceMotion && <circle r="2.5"><animateMotion dur={`${3.6 + index * 0.4}s`} repeatCount="indefinite" path={path} /></circle>}
-            </g>
-          ))}
-        </g>
-
-        <g className="map-node" transform="translate(42 82)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">PUBLIC</text><text x="14" y="43" className="map-node-detail">browser request</text>
-        </g>
-        <g className="map-node map-node-public" transform="translate(330 82)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">CLOUDFLARE</text><text x="14" y="43" className="map-node-detail">edge + TLS</text>
-        </g>
-        <g className="map-node map-node-public" transform="translate(646 82)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">TUNNEL</text><text x="14" y="43" className="map-node-detail">outbound only</text>
-        </g>
-        <g className="map-node" transform="translate(42 356)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">ADMIN</text><text x="14" y="43" className="map-node-detail">trusted device</text>
-        </g>
-        <g className="map-node map-node-private" transform="translate(330 356)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">TAILSCALE</text><text x="14" y="43" className="map-node-detail">WireGuard mesh</text>
-        </g>
-        <g className="map-node map-node-deploy" transform="translate(328 220)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">GITHUB</text><text x="14" y="43" className="map-node-detail">deploy runner</text>
-        </g>
-        <g className="map-node map-node-deploy" transform="translate(646 356)">
-          <rect width="100" height="60" rx="8" />
-          <text x="14" y="25">COMPOSE</text><text x="14" y="43" className="map-node-detail">SSH / rebuild</text>
-        </g>
-
-        <g className="host-node" transform="translate(850 188)">
-          <rect width="126" height="136" rx="12" fill="url(#host-fill)" />
-          <rect className="host-status-mark" x="14" y="16" width="8" height="8" rx="1" />
-          <text x="30" y="24" className="host-label">PHYSICAL NODE</text>
-          <line x1="14" x2="112" y1="38" y2="38" />
-          <text x="14" y="62">ARCH LINUX</text>
-          <text x="14" y="82" className="map-node-detail">Docker / Nginx</text>
-          <text x="14" y="99" className="map-node-detail">SSH / Samba</text>
-          <text x="14" y="120" className="host-foot">HOME NETWORK</text>
-        </g>
-
-        <text x="42" y="35" className="map-lane-label">PUBLIC DATA PLANE</text>
-        <text x="42" y="476" className="map-lane-label">PRIVATE CONTROL PLANE</text>
-        <text x="852" y="165" className="map-lane-label">ORIGIN</text>
-      </svg>
-      <div className="map-caption">
-        <span><i className="legend-public" /> public ingress</span>
-        <span><i className="legend-private" /> private administration</span>
-        <span><i className="legend-deploy" /> deployment</span>
+    <div className={`route-explorer route-explorer-${active}`}>
+      <div className="route-tabs" role="tablist" aria-label="Choose a route through the server">
+        {Object.entries(routes).map(([key, value], index) => (
+          <button key={key} type="button" role="tab" aria-selected={active === key} className={active === key ? "active" : ""} onClick={() => setActive(key)}>
+            <span>0{index + 1}</span>{value.label}
+          </button>
+        ))}
+      </div>
+      <div className="route-canvas" role="tabpanel">
+        <svg viewBox="0 0 1000 270" role="img" aria-labelledby="route-map-title route-map-description">
+          <title id="route-map-title">{route.label} route through the arch-server</title>
+          <desc id="route-map-description">{route.note}</desc>
+          <path className="route-rail" d="M 90 135 C 205 62, 295 208, 410 135 S 615 62, 730 135 S 860 208, 925 135" />
+          <path className="route-rail-active" d="M 90 135 C 205 62, 295 208, 410 135 S 615 62, 730 135 S 860 208, 925 135" pathLength="1" />
+          {route.nodes.map((node, index) => {
+            const x = [90, 300, 515, 730, 925][index];
+            const y = [135, 108, 135, 108, 135][index];
+            return (
+              <g className="route-stop" transform={`translate(${x} ${y})`} key={node}>
+                <circle r={index === 4 ? 16 : 11} />
+                <text y={index % 2 ? -31 : 38} textAnchor="middle">{node}</text>
+                <text className="route-stop-index" y={index % 2 ? -17 : 53} textAnchor="middle">0{index + 1}</text>
+              </g>
+            );
+          })}
+        </svg>
+        <div className="route-explanation"><span>{route.label}</span><p>{route.note}</p></div>
       </div>
     </div>
   );

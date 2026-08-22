@@ -1,466 +1,193 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import * as THREE from "three";
 
-const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-const originLatitude = (20 * Math.PI) / 180;
-const originLongitude = (78 * Math.PI) / 180;
-const originVector = {
-  x: Math.cos(originLatitude) * Math.cos(originLongitude),
-  y: Math.sin(originLatitude),
-  z: Math.cos(originLatitude) * Math.sin(originLongitude),
+const COUNT = 960;
+const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
+
+const random = (index, salt = 0) => {
+  const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
+  return value - Math.floor(value);
 };
 
-const latLonToVector = (latitude, longitude) => {
-  const lat = (latitude * Math.PI) / 180;
-  const lon = (longitude * Math.PI) / 180;
-  return {
-    x: Math.cos(lat) * Math.cos(lon),
-    y: Math.sin(lat),
-    z: Math.cos(lat) * Math.sin(lon),
-  };
+const laptopPoint = (index) => {
+  const section = index % 10;
+  const t = random(index, 1);
+  if (section < 7) {
+    const edge = index % 4;
+    if (edge === 0) return [-2.25 + t * 4.5, 1.55, random(index, 2) * 0.12];
+    if (edge === 1) return [2.25, -1.15 + t * 2.7, random(index, 2) * 0.12];
+    if (edge === 2) return [2.25 - t * 4.5, -1.15, random(index, 2) * 0.12];
+    return [-2.25, 1.55 - t * 2.7, random(index, 2) * 0.12];
+  }
+  return [-2.6 + t * 5.2, -1.35 - random(index, 3) * 0.75, (random(index, 4) - 0.5) * 1.4];
 };
 
-const routeNodes = [
-  {
-    id: "public",
-    label: "CF EDGE",
-    detail: "TLS / 443",
-    color: [47, 112, 139],
-    vector: latLonToVector(40, -74),
-  },
-  {
-    id: "private",
-    label: "TAILNET PEER",
-    detail: "WIREGUARD",
-    color: [71, 119, 93],
-    vector: latLonToVector(1, 103),
-  },
-  {
-    id: "deploy",
-    label: "CI RUNNER",
-    detail: "SSH / REBUILD",
-    color: [168, 102, 63],
-    vector: latLonToVector(52, 0),
-    labelSide: "left",
-  },
+const serverPoint = (index) => {
+  const rack = index % 4;
+  const angle = random(index, 5) * Math.PI * 2;
+  const radius = 1.05 + random(index, 6) * 0.22;
+  const y = -1.65 + rack * 1.05 + (random(index, 7) - 0.5) * 0.35;
+  return [Math.cos(angle) * radius, y, Math.sin(angle) * radius * 0.65];
+};
+
+const networkPoint = (index) => {
+  const phi = Math.acos(1 - 2 * ((index + 0.5) / COUNT));
+  const theta = Math.PI * (1 + Math.sqrt(5)) * index;
+  const radius = 2.25 + (random(index, 8) - 0.5) * 0.08;
+  return [Math.cos(theta) * Math.sin(phi) * radius, Math.cos(phi) * radius, Math.sin(theta) * Math.sin(phi) * radius];
+};
+
+const buildShape = (factory) => {
+  const points = new Float32Array(COUNT * 3);
+  for (let index = 0; index < COUNT; index += 1) {
+    const [x, y, z] = factory(index);
+    points[index * 3] = x;
+    points[index * 3 + 1] = y;
+    points[index * 3 + 2] = z;
+  }
+  return points;
+};
+
+const stages = [
+  ["01", "Broken display", "The screen stopped being a dependable way into the machine."],
+  ["02", "Headless node", "Arch kept running, so the laptop became a small always-on server."],
+  ["03", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
 ];
 
-const createRouteSamples = (from, to, count = 42) => Array.from({ length: count }, (_, index) => {
-  const progress = index / (count - 1);
-  const x = from.x * (1 - progress) + to.x * progress;
-  const y = from.y * (1 - progress) + to.y * progress;
-  const z = from.z * (1 - progress) + to.z * progress;
-  const length = Math.hypot(x, y, z) || 1;
-  const lift = 1 + Math.sin(progress * Math.PI) * 0.12;
-  return { x: (x / length) * lift, y: (y / length) * lift, z: (z / length) * lift };
-});
+const NetworkGlobe = () => {
+  const mountRef = useRef(null);
+  const activeRef = useRef(0);
+  const [active, setActive] = useState(0);
+  const shouldReduceMotion = useReducedMotion();
+  const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
 
-const globeRoutes = routeNodes.map((node) => ({
-  ...node,
-  samples: createRouteSamples(node.vector, originVector),
-}));
-
-const createSpherePoints = (count) => Array.from({ length: count }, (_, index) => {
-  const normalizedIndex = index / Math.max(1, count - 1);
-  const y = 1 - normalizedIndex * 2;
-  const horizontalRadius = Math.sqrt(Math.max(0, 1 - y * y));
-  const angle = goldenAngle * index;
-  const x = Math.cos(angle) * horizontalRadius;
-  const z = Math.sin(angle) * horizontalRadius;
-  const originProximity = x * originVector.x + y * originVector.y + z * originVector.z;
-
-  return {
-    x,
-    y,
-    z,
-    size: 0.55 + (((index * 29) % 89) / 89) * 0.9,
-    phase: (((index * 61) % 101) / 101) * Math.PI * 2,
-    current: 0.7 + (((index * 43) % 97) / 97) * 0.65,
-    origin: originProximity > 0.985,
-    offsetX: 0,
-    offsetY: 0,
-    velocityX: 0,
-    velocityY: 0,
-  };
-});
-
-const NetworkGlobe = ({ className = "" }) => {
-  const containerRef = useRef(null);
-  const canvasRef = useRef(null);
-  const frameRef = useRef(null);
-  const spherePointsRef = useRef([]);
-  const pointerRef = useRef({
-    x: 0,
-    y: 0,
-    targetX: 0,
-    targetY: 0,
-    localX: 0,
-    localY: 0,
-    previousX: 0,
-    previousY: 0,
-    velocityX: 0,
-    velocityY: 0,
-    active: false,
-  });
-  const prefersReducedMotion = useReducedMotion();
+  useEffect(() => { activeRef.current = active; }, [active]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) return undefined;
+    const mount = mountRef.current;
+    if (!mount) return undefined;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.set(0, 0, 8.7);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    renderer.setClearColor(0x000000, 0);
+    mount.appendChild(renderer.domElement);
 
-    const context = canvas.getContext("2d");
-    if (!context) return undefined;
+    const positions = shapes[0].slice();
+    const velocities = new Float32Array(COUNT * 3);
+    const colors = new Float32Array(COUNT * 3);
+    for (let index = 0; index < COUNT; index += 1) {
+      const color = new THREE.Color(PALETTE[index % PALETTE.length]);
+      colors[index * 3] = color.r;
+      colors[index * 3 + 1] = color.g;
+      colors[index * 3 + 2] = color.b;
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.PointsMaterial({ size: 0.055, sizeAttenuation: true, transparent: true, opacity: 0.88, vertexColors: true, depthWrite: false });
+    const cloud = new THREE.Points(geometry, material);
+    scene.add(cloud);
 
-    const reducedMotion = Boolean(prefersReducedMotion);
-    let width = 0;
-    let height = 0;
-    let dpr = 1;
-    let start = performance.now();
-    let sceneCenterX = 0;
-    let sceneCenterY = 0;
-    let sceneRadius = 0;
-    let fieldOffsetX = 0;
-    let fieldOffsetY = 0;
-    let isVisible = true;
-    let isDocumentVisible = document.visibilityState === "visible";
-
+    const pointer = { x: 20, y: 20, active: false };
     const resize = () => {
-      const rect = container.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const particleCount = Math.round(clamp(width * 1.75, 620, 1080));
-      spherePointsRef.current = createSpherePoints(particleCount);
+      const { width, height } = mount.getBoundingClientRect();
+      renderer.setSize(Math.max(1, width), Math.max(1, height), false);
+      camera.aspect = width / Math.max(1, height);
+      camera.updateProjectionMatrix();
     };
-
-    const rotateAndProject = (point, rotation, tilt, radius, centerX, centerY) => {
-      const cosRotation = Math.cos(rotation);
-      const sinRotation = Math.sin(rotation);
-      const rotatedX = point.x * cosRotation - point.z * sinRotation;
-      const rotatedZ = point.z * cosRotation + point.x * sinRotation;
-      const cosTilt = Math.cos(tilt);
-      const sinTilt = Math.sin(tilt);
-      const y = point.y * cosTilt - rotatedZ * sinTilt;
-      const z = point.y * sinTilt + rotatedZ * cosTilt;
-
-      return {
-        x: centerX + rotatedX * radius,
-        y: centerY - y * radius,
-        z,
-      };
+    const onPointerMove = (event) => {
+      const rect = mount.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width - 0.5) * 7.4;
+      pointer.y = -((event.clientY - rect.top) / rect.height - 0.5) * 5.2;
+      pointer.active = true;
     };
+    const onPointerLeave = () => { pointer.active = false; };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(mount);
+    mount.addEventListener("pointermove", onPointerMove);
+    mount.addEventListener("pointerleave", onPointerLeave);
 
-    const applyPointerField = (projected, pointer, radius, strength = 1) => {
-      if (!pointer.active || reducedMotion) return projected;
-      const dx = projected.x - pointer.localX;
-      const dy = projected.y - pointer.localY;
-      const distance = Math.max(0.01, Math.hypot(dx, dy));
-      const interactionRadius = Math.max(105, radius * 0.72);
-      const influence = clamp(1 - distance / interactionRadius);
-      const displacement = influence ** 2 * radius * 0.18 * strength;
-      return {
-        ...projected,
-        x: projected.x + (dx / distance) * displacement + pointer.velocityX * influence * 0.16,
-        y: projected.y + (dy / distance) * displacement + pointer.velocityY * influence * 0.16,
-      };
-    };
-
-    const drawRoutes = (rotation, tilt, radius, centerX, centerY, pointer) => {
-      globeRoutes.forEach((route) => {
-        const projectedSamples = route.samples.map((sample) => {
-          const projected = rotateAndProject(sample, rotation, tilt, radius, centerX, centerY);
-          return applyPointerField(projected, pointer, radius, 0.72);
-        });
-
-        context.save();
-        context.lineWidth = 1;
-        context.setLineDash(route.id === "deploy" ? [3, 5] : [1.5, 4]);
-        context.beginPath();
-        projectedSamples.forEach((sample, index) => {
-          if (index === 0) context.moveTo(sample.x, sample.y);
-          else context.lineTo(sample.x, sample.y);
-        });
-        const averageDepth = projectedSamples.reduce((sum, sample) => sum + clamp((sample.z + 1) / 2), 0) / projectedSamples.length;
-        context.strokeStyle = `rgba(${route.color.join(", ")}, ${0.31 + averageDepth * 0.27})`;
-        context.stroke();
-        context.restore();
-      });
-    };
-
-    const drawNode = ({ projected, label, detail, color, origin = false, labelSide }) => {
-      const depth = clamp((projected.z + 1) / 2);
-      const alpha = 0.48 + depth * 0.42;
-      const rightSide = labelSide ? labelSide === "right" : projected.x <= width * 0.72;
-      const labelX = projected.x + (rightSide ? 13 : -13);
-      const align = rightSide ? "left" : "right";
-
-      context.save();
-      context.strokeStyle = `rgba(${color.join(", ")}, ${alpha})`;
-      context.fillStyle = `rgba(${color.join(", ")}, ${Math.min(0.95, alpha + 0.08)})`;
-      context.lineWidth = origin ? 1.2 : 0.9;
-
-      if (origin) {
-        const size = 7;
-        context.strokeRect(projected.x - size / 2, projected.y - size / 2, size, size);
-        context.fillRect(projected.x - 1.5, projected.y - 1.5, 3, 3);
-      } else {
-        context.beginPath();
-        context.arc(projected.x, projected.y, 3.6, 0, Math.PI * 2);
-        context.stroke();
-        context.beginPath();
-        context.arc(projected.x, projected.y, 1.2, 0, Math.PI * 2);
-        context.fill();
-      }
-
-      context.beginPath();
-      context.moveTo(projected.x + (rightSide ? 5 : -5), projected.y);
-      context.lineTo(projected.x + (rightSide ? 10 : -10), projected.y);
-      context.stroke();
-
-      context.textAlign = align;
-      context.textBaseline = "bottom";
-      context.font = '600 8px "JetBrains Mono", monospace';
-      context.fillText(label, labelX, projected.y - 1);
-      context.textBaseline = "top";
-      context.font = '500 7px "JetBrains Mono", monospace';
-      context.fillStyle = `rgba(71, 78, 76, ${0.56 + depth * 0.22})`;
-      context.fillText(detail, labelX, projected.y + 3);
-      context.restore();
-    };
-
-    const draw = (now) => {
-      const elapsed = (now - start) / 1000;
-      const pointer = pointerRef.current;
-      pointer.x += (pointer.targetX - pointer.x) * 0.065;
-      pointer.y += (pointer.targetY - pointer.y) * 0.065;
-      pointer.velocityX *= 0.84;
-      pointer.velocityY *= 0.84;
-
-      context.clearRect(0, 0, width, height);
-
-      const radius = Math.min(width, height) * 0.32;
-      const targetFieldX = pointer.active ? pointer.x * radius * 0.16 : 0;
-      const targetFieldY = pointer.active ? pointer.y * radius * 0.12 : 0;
-      fieldOffsetX += (targetFieldX - fieldOffsetX) * 0.045;
-      fieldOffsetY += (targetFieldY - fieldOffsetY) * 0.045;
-
-      const centerX = width * 0.51 + fieldOffsetX;
-      const centerY = height * 0.49 + fieldOffsetY;
-      const rotation = 1.05 + (reducedMotion ? 0 : elapsed * 0.045) + pointer.x * 0.22;
-      const tilt = -0.18 + pointer.y * 0.15;
-      const cursorX = pointer.localX;
-      const cursorY = pointer.localY;
-
-      sceneCenterX = centerX;
-      sceneCenterY = centerY;
-      sceneRadius = radius;
-
-      drawRoutes(rotation, tilt, radius, centerX, centerY, pointer);
-
-      spherePointsRef.current.forEach((particle) => {
-        const breathingRadius = radius * (
-          1 + (reducedMotion ? 0 : Math.sin(elapsed * 0.55 * particle.current + particle.phase) * 0.009)
-        );
-        const base = rotateAndProject(particle, rotation, tilt, breathingRadius, centerX, centerY);
-        const depth = clamp((base.z + 1) / 2);
-        const particleXBeforeForce = base.x + particle.offsetX;
-        const particleYBeforeForce = base.y + particle.offsetY;
-        const cursorDx = particleXBeforeForce - cursorX;
-        const cursorDy = particleYBeforeForce - cursorY;
-        const cursorDistance = Math.max(0.01, Math.hypot(cursorDx, cursorDy));
-        const interactionRadius = Math.max(105, radius * 0.72);
-        const influence = pointer.active
-          ? clamp(1 - cursorDistance / interactionRadius)
-          : 0;
-
-        if (influence > 0 && !reducedMotion) {
-          const pressure = influence ** 2;
-          const force = 2.1 * pressure * (0.6 + depth * 0.65);
-          particle.velocityX += (cursorDx / cursorDistance) * force;
-          particle.velocityY += (cursorDy / cursorDistance) * force;
-
-          const flow = influence * 0.13;
-          particle.velocityX += pointer.velocityX * flow;
-          particle.velocityY += pointer.velocityY * flow;
-
-          const swirl = pressure * 0.16;
-          particle.velocityX += (-cursorDy / cursorDistance) * swirl;
-          particle.velocityY += (cursorDx / cursorDistance) * swirl;
+    let frame = 0;
+    let visible = true;
+    const visibilityObserver = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }, { rootMargin: "120px" });
+    visibilityObserver.observe(mount);
+    const render = () => {
+      frame = window.requestAnimationFrame(render);
+      if (!visible) return;
+      const target = shapes[activeRef.current];
+      const attribute = geometry.attributes.position;
+      const array = attribute.array;
+      for (let index = 0; index < COUNT; index += 1) {
+        const offset = index * 3;
+        if (shouldReduceMotion) {
+          array[offset] = target[offset];
+          array[offset + 1] = target[offset + 1];
+          array[offset + 2] = target[offset + 2];
+          continue;
         }
-
-        if (!reducedMotion) {
-          const waveX = pointer.active
-            ? Math.sin(elapsed * particle.current + particle.phase) * influence * 2.4
-            : 0;
-          const waveY = pointer.active
-            ? Math.cos(elapsed * particle.current * 0.8 + particle.phase) * influence * 2.4
-            : 0;
-          particle.velocityX += (waveX - particle.offsetX) * 0.012;
-          particle.velocityY += (waveY - particle.offsetY) * 0.012;
-          particle.velocityX *= 0.925;
-          particle.velocityY *= 0.925;
-          particle.offsetX += particle.velocityX;
-          particle.offsetY += particle.velocityY;
-
-          const maxDisplacement = radius * 0.82;
-          const displacement = Math.hypot(particle.offsetX, particle.offsetY);
-          if (displacement > maxDisplacement) {
-            const scale = maxDisplacement / displacement;
-            particle.offsetX *= scale;
-            particle.offsetY *= scale;
+        velocities[offset] += (target[offset] - array[offset]) * 0.026;
+        velocities[offset + 1] += (target[offset + 1] - array[offset + 1]) * 0.026;
+        velocities[offset + 2] += (target[offset + 2] - array[offset + 2]) * 0.026;
+        if (pointer.active) {
+          const dx = array[offset] - pointer.x;
+          const dy = array[offset + 1] - pointer.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < 1.15) {
+            const force = (1.15 - distance) * 0.042;
+            velocities[offset] += (dx / Math.max(distance, 0.08)) * force;
+            velocities[offset + 1] += (dy / Math.max(distance, 0.08)) * force;
+            velocities[offset + 2] += (random(index, 10) - 0.5) * force;
           }
         }
-
-        const particleX = base.x + particle.offsetX;
-        const particleY = base.y + particle.offsetY;
-        const displacement = Math.hypot(particle.offsetX, particle.offsetY);
-        const displacementAlpha = clamp(displacement / 80) * 0.13;
-        const alpha = 0.1 + depth * 0.62 + displacementAlpha;
-        const pointSize = particle.size * (0.6 + depth * 0.74 + influence * 0.18);
-
-        context.fillStyle = particle.origin
-          ? `rgba(176, 92, 42, ${Math.min(0.9, alpha + 0.12)})`
-          : `rgba(37, 82, 101, ${alpha})`;
-        context.beginPath();
-        context.arc(particleX, particleY, pointSize, 0, Math.PI * 2);
-        context.fill();
-      });
-
-      globeRoutes.forEach((route) => {
-        const projected = applyPointerField(
-          rotateAndProject(route.vector, rotation, tilt, radius * 1.02, centerX, centerY),
-          pointer,
-          radius,
-          0.78,
-        );
-        drawNode({
-          projected,
-          label: route.label,
-          detail: route.detail,
-          color: route.color,
-          labelSide: route.labelSide,
-        });
-      });
-
-      const projectedOrigin = applyPointerField(
-        rotateAndProject(originVector, rotation, tilt, radius * 1.025, centerX, centerY),
-        pointer,
-        radius,
-        0.9,
-      );
-      drawNode({
-        projected: projectedOrigin,
-        label: "HOME ORIGIN",
-        detail: "ARCH / NGINX",
-        color: [168, 102, 63],
-        origin: true,
-      });
-
-      frameRef.current = isVisible && isDocumentVisible && !reducedMotion
-        ? window.requestAnimationFrame(draw)
-        : null;
-    };
-
-    const updatePointer = (event) => {
-      const rect = container.getBoundingClientRect();
-      const localX = event.clientX - rect.left;
-      const localY = event.clientY - rect.top;
-      const pointer = pointerRef.current;
-      pointer.targetX = (localX / rect.width - 0.5) * 2;
-      pointer.targetY = (localY / rect.height - 0.5) * 2;
-      pointer.velocityX = clamp(localX - pointer.previousX, -26, 26);
-      pointer.velocityY = clamp(localY - pointer.previousY, -26, 26);
-      pointer.previousX = localX;
-      pointer.previousY = localY;
-      pointer.localX = localX;
-      pointer.localY = localY;
-      pointer.active = Math.hypot(localX - sceneCenterX, localY - sceneCenterY) <= sceneRadius * 1.22;
-    };
-
-    const handlePointerEnter = (event) => {
-      const rect = container.getBoundingClientRect();
-      pointerRef.current.previousX = event.clientX - rect.left;
-      pointerRef.current.previousY = event.clientY - rect.top;
-      updatePointer(event);
-    };
-
-    const handlePointerLeave = () => {
-      pointerRef.current.targetX = 0;
-      pointerRef.current.targetY = 0;
-      pointerRef.current.velocityX = 0;
-      pointerRef.current.velocityY = 0;
-      pointerRef.current.active = false;
-    };
-
-    const handleResize = () => {
-      resize();
-      if (reducedMotion) draw(performance.now());
-    };
-
-    const resizeObserver = new ResizeObserver(handleResize);
-    const visibilityObserver = new IntersectionObserver(([entry]) => {
-      isVisible = entry.isIntersecting;
-      if (isVisible && isDocumentVisible && !reducedMotion && frameRef.current === null) {
-        frameRef.current = window.requestAnimationFrame(draw);
-      } else if (!isVisible && frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      } else if (isVisible && reducedMotion) {
-        draw(performance.now());
+        velocities[offset] *= 0.88;
+        velocities[offset + 1] *= 0.88;
+        velocities[offset + 2] *= 0.88;
+        array[offset] += velocities[offset];
+        array[offset + 1] += velocities[offset + 1];
+        array[offset + 2] += velocities[offset + 2];
       }
-    }, { rootMargin: "120px" });
-
-    const handleVisibilityChange = () => {
-      isDocumentVisible = document.visibilityState === "visible";
-      if (!isDocumentVisible && frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      } else if (isDocumentVisible && isVisible && !reducedMotion && frameRef.current === null) {
-        frameRef.current = window.requestAnimationFrame(draw);
-      }
+      cloud.rotation.y += pointer.active && activeRef.current === 2 ? 0.0018 : 0;
+      cloud.rotation.x += ((pointer.active ? pointer.y * -0.018 : 0) - cloud.rotation.x) * 0.025;
+      attribute.needsUpdate = true;
+      renderer.render(scene, camera);
     };
-
-    resizeObserver.observe(container);
-    visibilityObserver.observe(container);
-    container.addEventListener("pointerenter", handlePointerEnter);
-    container.addEventListener("pointermove", updatePointer);
-    container.addEventListener("pointerleave", handlePointerLeave);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    resize();
-    start = performance.now();
-    if (reducedMotion) draw(start);
-    else frameRef.current = window.requestAnimationFrame(draw);
-
+    render();
     return () => {
-      resizeObserver.disconnect();
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
       visibilityObserver.disconnect();
-      container.removeEventListener("pointerenter", handlePointerEnter);
-      container.removeEventListener("pointermove", updatePointer);
-      container.removeEventListener("pointerleave", handlePointerLeave);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
+      mount.removeEventListener("pointermove", onPointerMove);
+      mount.removeEventListener("pointerleave", onPointerLeave);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
     };
-  }, [prefersReducedMotion]);
+  }, [shapes, shouldReduceMotion]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`network-globe ${className}`}
-      aria-label="Deformable particle globe showing the physical Arch Linux server in India and its Cloudflare, Tailscale, and GitHub deployment routes"
-      role="img"
-    >
-      <canvas ref={canvasRef} aria-hidden="true" />
-      <div className="globe-coordinate globe-coordinate-top">GLOBAL REQUEST FIELD</div>
-      <div className="globe-coordinate globe-coordinate-bottom">PHYSICAL ORIGIN / INDIA</div>
+    <div className="machine-scene">
+      <div ref={mountRef} className="machine-scene-canvas" aria-hidden="true" />
+      {active === 2 && (
+        <div className="scene-route-labels" aria-hidden="true">
+          <span className="scene-route scene-route-public">Cloudflare<small>public ingress</small></span>
+          <span className="scene-route scene-route-private">Tailscale<small>private admin</small></span>
+          <span className="scene-route scene-route-deploy">GitHub<small>deployment</small></span>
+          <span className="scene-origin">Lenovo / Arch</span>
+        </div>
+      )}
+      <div className="scene-stage-picker" role="group" aria-label="The laptop's transformation">
+        {stages.map(([number, title, detail], index) => (
+          <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => setActive(index)} aria-pressed={active === index}>
+            <span>{number}</span><strong>{title}</strong><small>{detail}</small>
+          </button>
+        ))}
+      </div>
+      <p className="scene-instruction">Move across the particles to disturb them. They rebuild around the selected state.</p>
     </div>
   );
 };

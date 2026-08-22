@@ -1,132 +1,100 @@
+import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import {
-  ArrowDown,
-  ArrowUpRight,
-  Cloud,
-  Code2,
-  Container,
-  GitBranch,
-  HardDrive,
-  Network,
-  Server,
-  ShieldCheck,
-  Terminal,
-} from "lucide-react";
-import NetworkGlobe from "@/components/NetworkGlobe";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowDown, ArrowUpRight, Cloud, Code2, Container, GitBranch, HardDrive, Network, Server, ShieldCheck, Terminal } from "lucide-react";
 import InfrastructureMap from "@/components/InfrastructureMap";
+import ServerStatus from "@/components/ServerStatus";
 import fastfetchImg from "../../../assets/fastfetch-sanitized.jpg";
 
+const NetworkGlobe = lazy(() => import("@/components/NetworkGlobe"));
+
 const requestStory = [
-  {
-    icon: Cloud,
-    title: "Your browser asks Cloudflare",
-    body: "Cloudflare answers the public door: it resolves the domain, handles HTTPS, and filters the request. At this point, your browser still knows nothing about my home network.",
-  },
-  {
-    icon: Network,
-    title: "The server has already called out",
-    body: "A cloudflared container on the Lenovo keeps an outbound tunnel open. Cloudflare sends the accepted request down that existing connection, so I never have to expose a router port.",
-  },
-  {
-    icon: Container,
-    title: "Nginx serves this page",
-    body: "Inside Docker, Nginx receives the request and returns the compiled React site. The page describing the machine is literally coming from that machine.",
-  },
-  {
-    icon: Terminal,
-    title: "Administration takes a different road",
-    body: "SSH and Samba do not share the public route. My own devices reach them over Tailscale, an encrypted WireGuard mesh with device identity built in.",
-  },
-  {
-    icon: GitBranch,
-    title: "A push updates the server",
-    body: "When website code lands on main, GitHub Actions joins the private network, connects over SSH, rebuilds the Compose stack, and replaces the site you are reading.",
-  },
+  [Cloud, "Your browser asks Cloudflare", "Cloudflare resolves the domain, handles HTTPS, and filters the request. Your browser never learns where my home network is."],
+  [Network, "The laptop has already called out", "A cloudflared container keeps an outbound tunnel open. Accepted requests travel down that existing connection, so the router exposes no port."],
+  [Container, "Nginx returns the website", "Inside Docker, Nginx receives internal HTTP and serves the compiled React files. This page about the machine is coming from the machine."],
+  [Terminal, "Administration takes another road", "SSH and Samba stay on Tailscale. My devices reach them through an encrypted WireGuard mesh with device identity attached."],
+  [GitBranch, "A push replaces the running site", "GitHub Actions receives a short-lived Tailscale identity, reaches only SSH, rebuilds Compose, and verifies the public health route."],
 ];
+
+const jobs = [
+  [HardDrive, "Private storage", "Samba makes the internal SSD available to enrolled devices without publishing a file browser."],
+  [Terminal, "Remote Linux machine", "I can use a private SSH route, or an identity-gated browser terminal at ssh.tanmaytiwari.me."],
+  [Server, "Self-hosted origin", "Docker runs this website, its telemetry endpoint, and the outbound Cloudflare connector."],
+];
+
+const Reveal = ({ children, className = "" }) => {
+  const reduced = useReducedMotion();
+  return <motion.div className={className} initial={reduced ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}>{children}</motion.div>;
+};
 
 const Home = () => (
   <div className="site-page home-page">
     <section className="hero-section page-width">
       <div className="hero-copy">
-        <div className="eyebrow">an old laptop with a second job</div>
-        <h1>The screen died.<br />The computer did not.</h1>
-        <p className="hero-lead">
-          I turned my old Arch Linux laptop into a headless home server. It stores files, accepts a private shell, deploys my projects, and serves this website about itself.
-        </p>
-        <p className="origin-proof">You are reading a page delivered by the Lenovo IdeaPad sitting on my desk in India.</p>
+        <div className="eyebrow">A broken display became a working piece of infrastructure</div>
+        <h1>The laptop became a node.</h1>
+        <p className="hero-lead">My old Arch Linux laptop stores files, accepts a private shell, deploys projects, and serves this website about itself.</p>
+        <p className="origin-proof">This page travelled from a Lenovo IdeaPad on my desk in India, through an outbound Cloudflare tunnel, to your browser.</p>
         <div className="hero-actions">
-          <a href="#how-it-works" className="primary-action">See how it works <ArrowDown size={16} /></a>
-          <a href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noreferrer" className="secondary-action">
-            <Code2 size={16} /> View source
-          </a>
+          <a href="#story" className="primary-action">Follow the transformation <ArrowDown size={16} /></a>
+          <a href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noreferrer" className="secondary-action"><Code2 size={16} /> View source</a>
         </div>
       </div>
-
-      <div className="globe-panel">
-        <div className="panel-chrome"><span>LIVE NETWORK MODEL</span><span>3 ROUTES / 1 PHYSICAL NODE</span></div>
-        <NetworkGlobe />
-        <div className="globe-readout">
-          <div><span>INGRESS</span><strong>Cloudflare / TLS 443</strong></div>
-          <div><span>ADMIN</span><strong>Tailscale / WireGuard</strong></div>
-          <div><span>DEPLOY</span><strong>GitHub / SSH rebuild</strong></div>
-        </div>
+      <div className="hero-machine">
+        <div className="machine-kicker"><span>Interactive system model</span><span>Three states / one machine</span></div>
+        <Suspense fallback={<div className="machine-scene machine-scene-loading" aria-label="Loading interactive system model" />}>
+          <NetworkGlobe />
+        </Suspense>
       </div>
     </section>
 
-    <section className="explain-section page-width" id="how-it-works">
-      <div className="editorial-heading">
-        <span className="section-index">HOW IT WORKS</span>
-        <h2>One request, three networks, no mysterious magic.</h2>
-        <p>
-          The animated dots below are the only lights that move on purpose. They represent traffic: blue for the public site, green for private administration, and amber for deployment.
-        </p>
+    <section className="transformation-story page-width" id="story">
+      <Reveal className="story-intro">
+        <span className="section-index">THE SHORT VERSION</span>
+        <h2>A screen failure changed the role, not the computer.</h2>
+        <p>I already loved the machine because it was my Arch and Hyprland playground. When its display stopped being dependable, I did not wipe away that history. I removed the display as a dependency and gave the hardware a quieter job.</p>
+      </Reveal>
+      <div className="story-chapters">
+        {[
+          ["01", "It was personal first.", "Pywal, Waybar, Kitty, Zsh, Wofi, Hyprlock, and a keyboard-first workflow made the laptop mine."],
+          ["02", "The display failed.", "The computer still booted and the SSD still held a system I cared about. Only the normal doorway had gone."],
+          ["03", "I made it headless.", "Closed-lid operation, SSH, Tailscale, Samba, Docker, and systemd turned it into a machine that did not need a screen."],
+          ["04", "Then I gave it a public proof.", "Cloudflare Tunnel lets the laptop serve this site without exposing my router or home address."],
+        ].map(([number, title, body]) => <Reveal className="story-chapter" key={number}><span>{number}</span><div><h3>{title}</h3><p>{body}</p></div></Reveal>)}
       </div>
+      <Link to="/about" className="text-link story-more">Read the complete story <ArrowUpRight size={15} /></Link>
+    </section>
+
+    <section className="route-section page-width" id="how-it-works">
+      <Reveal className="editorial-heading">
+        <span className="section-index">FOLLOW ONE REQUEST</span>
+        <h2>Three routes end at the same laptop. They do not share the same trust.</h2>
+        <p>Choose a route. The diagram explains what crosses the public internet, what stays private, and what a deployment runner can reach.</p>
+      </Reveal>
       <InfrastructureMap />
       <ol className="request-story">
-        {requestStory.map(({ icon: Icon, title, body }, index) => (
-          <li key={title}>
-            <span className="story-number">0{index + 1}</span>
-            <Icon size={21} strokeWidth={1.5} />
-            <div><h3>{title}</h3><p>{body}</p></div>
-          </li>
+        {requestStory.map(([Icon, title, body], index) => (
+          <li key={title}><span className="story-number">0{index + 1}</span><Icon size={20} strokeWidth={1.5} /><div><h3>{title}</h3><p>{body}</p></div></li>
         ))}
       </ol>
-      <div className="deep-dive-link">
-        <p>That is the friendly version. The complete topology also documents Cloudflare Access, Samba, container boundaries, restart behavior, and the deployment route.</p>
-        <Link to="/architecture" className="text-link">Open the technical architecture <ArrowUpRight size={15} /></Link>
-      </div>
+      <div className="deep-dive-link"><p>The detailed map includes Cloudflare Access, Samba, container boundaries, restart behaviour, and the full OIDC deployment path.</p><Link to="/architecture" className="text-link">Open the technical architecture <ArrowUpRight size={15} /></Link></div>
     </section>
 
-    <section className="section-block page-width useful-section">
-      <div className="editorial-heading compact">
-        <span className="section-index">WHAT THE MACHINE DOES</span>
-        <h2>A small server with a short, useful job list.</h2>
+    <section className="jobs-section page-width">
+      <Reveal className="editorial-heading compact"><span className="section-index">WHAT IT EARNS ITS POWER FOR</span><h2>Three useful jobs. No homelab theatre.</h2></Reveal>
+      <div className="job-ledger">
+        {jobs.map(([Icon, title, body], index) => <article key={title}><span>0{index + 1}</span><Icon size={20} strokeWidth={1.5} /><h3>{title}</h3><p>{body}</p></article>)}
       </div>
-      <div className="useful-list">
-        <article><HardDrive size={21} /><div><h3>Private storage</h3><p>Samba turns the internal SSD into a NAS for my Mac, phone, and other trusted devices over Tailscale.</p></div></article>
-        <article><Terminal size={21} /><div><h3>Remote Linux machine</h3><p>I administer Arch, move files, and run tools from a private shell without needing the broken display. On an unenrolled device, <a href="https://ssh.tanmaytiwari.me" target="_blank" rel="noreferrer">ssh.tanmaytiwari.me</a> opens the identity-gated browser terminal.</p></div></article>
-        <article><Server size={21} /><div><h3>Self-hosted projects</h3><p>Docker keeps the public workloads isolated and repeatable. Today that includes this site and its Cloudflare tunnel.</p></div></article>
-      </div>
-      <div className="access-principle">
-        <ShieldCheck size={20} strokeWidth={1.5} />
-        <p><strong>Reachable from anywhere does not mean open to anyone.</strong> Every person should have a separate, revocable identity rather than a shared login, private key, or network enrollment key.</p>
-        <Link to="/server#trust-model" className="text-link">Read the access model <ArrowUpRight size={15} /></Link>
-      </div>
+      <div className="access-principle"><ShieldCheck size={20} strokeWidth={1.5} /><p><strong>Reachable from anywhere does not mean open to anyone.</strong> People receive separate, revocable identities. They never receive my password, private key, or reusable network key.</p><Link to="/server#trust-model" className="text-link">Read the access model <ArrowUpRight size={15} /></Link></div>
+    </section>
+
+    <section className="home-live page-width">
+      <ServerStatus compact />
     </section>
 
     <section className="section-block page-width home-story-bridge">
-      <div className="story-bridge-copy">
-        <span className="section-index">WHY THIS EXISTS</span>
-        <h2>It started as a very customized laptop.</h2>
-        <p>
-          Before it was a server, this IdeaPad was my Arch and Hyprland playground: Pywal colors, Waybar, Kitty, Zsh, Wofi, CAVA shaders, and a keyboard-first workflow. When the display failed, I kept the system I loved and changed the role around it.
-        </p>
-        <Link to="/about" className="primary-action">Read the full story <ArrowUpRight size={15} /></Link>
-      </div>
-      <div className="terminal-evidence">
-        <div className="panel-chrome"><span>THE MACHINE TODAY</span><span>PRIVACY-SANITIZED CAPTURE</span></div>
-        <img src={fastfetchImg} alt="Privacy-sanitized Fastfetch output from the physical Arch Linux server" />
-      </div>
+      <Reveal className="story-bridge-copy"><span className="section-index">THE MACHINE TODAY</span><h2>Still personal. Just useful in a different way.</h2><p>The graphical setup remains available for local recovery and maintenance, while the public serving path stays small and boring: React, Nginx, cloudflared, and a coarse telemetry service.</p><Link to="/desktop" className="primary-action">See the retained desktop <ArrowUpRight size={15} /></Link></Reveal>
+      <div className="terminal-evidence"><div className="panel-chrome"><span>PRIVACY-SANITIZED CAPTURE</span><span>ARCH LINUX / PHYSICAL NODE</span></div><img src={fastfetchImg} alt="Privacy-sanitized Fastfetch output from the physical Arch Linux server" /></div>
     </section>
   </div>
 );
