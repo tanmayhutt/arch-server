@@ -1,5 +1,5 @@
 import { Code2, Server } from "lucide-react";
-import { useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 
 const navItems = [
@@ -9,6 +9,13 @@ const navItems = [
   ["/status", "Live"],
   ["/desktop", "Setup"],
   ["/about", "About"],
+];
+
+const homeNavItems = [
+  ["home", "Home"],
+  ["story", "Story"],
+  ["how-it-works", "Routes"],
+  ["live", "Live"],
 ];
 
 const pageMeta = {
@@ -35,6 +42,7 @@ const setMeta = (selector, attribute, value) => {
 
 const Layout = () => {
   const { pathname, hash } = useLocation();
+  const [activeSection, setActiveSection] = useState(hash.slice(1) || "home");
   useLayoutEffect(() => {
     const knownRoute = Boolean(pageMeta[pathname]);
     const [title, description] = pageMeta[pathname] || ["Page not found | arch-server", "This route does not exist on the arch-server project site."];
@@ -63,6 +71,37 @@ const Layout = () => {
     }
   }, [pathname, hash]);
 
+  useEffect(() => {
+    if (pathname !== "/") return undefined;
+
+    const sections = homeNavItems
+      .map(([id]) => document.getElementById(id))
+      .filter(Boolean);
+    if (!sections.length) return undefined;
+
+    let frameId = 0;
+    const syncActiveSection = () => {
+      frameId = 0;
+      const readingLine = window.scrollY + (window.innerHeight * 0.42);
+      const current = sections.reduce((active, section) => (
+        section.offsetTop <= readingLine ? section : active
+      ), sections[0]);
+      setActiveSection(current.id);
+    };
+    const handleScroll = () => {
+      if (!frameId) frameId = window.requestAnimationFrame(syncActiveSection);
+    };
+
+    syncActiveSection();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+      if (frameId) window.cancelAnimationFrame(frameId);
+    };
+  }, [pathname]);
+
   return (
     <div className="app-shell">
     <a className="skip-link" href="#main-content">Skip to content</a>
@@ -74,7 +113,17 @@ const Layout = () => {
           <small>HOME NODE</small>
         </Link>
         <div className="nav-links">
-          {navItems.map(([to, label]) => (
+          {pathname === "/" ? (
+            <>
+              {homeNavItems.map(([id, label]) => (
+                <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "location" : undefined}>
+                  {label}
+                </a>
+              ))}
+              <NavLink to="/desktop">Setup</NavLink>
+              <NavLink to="/about">About</NavLink>
+            </>
+          ) : navItems.map(([to, label]) => (
             <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>
               {label}
             </NavLink>

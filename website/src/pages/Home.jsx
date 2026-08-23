@@ -29,7 +29,7 @@ const Reveal = ({ children, className = "" }) => {
 
 const Home = () => (
   <div className="site-page home-page">
-    <section className="hero-section page-width">
+    <section className="hero-section page-width" id="home">
       <div className="hero-copy">
         <div className="eyebrow">A broken display became a working piece of infrastructure</div>
         <h1>The laptop became a node.</h1>
@@ -66,12 +66,14 @@ const Home = () => (
     </section>
 
     <section className="route-section page-width" id="how-it-works">
-      <Reveal className="editorial-heading">
-        <span className="section-index">FOLLOW ONE REQUEST</span>
-        <h2>Three routes end at the same laptop. They do not share the same trust.</h2>
-        <p>Choose a route. The diagram explains what crosses the public internet, what stays private, and what a deployment runner can reach.</p>
-      </Reveal>
-      <InfrastructureMap />
+      <div className="route-overview">
+        <Reveal className="editorial-heading">
+          <span className="section-index">FOLLOW ONE REQUEST</span>
+          <h2>Three routes end at the same laptop. They do not share the same trust.</h2>
+          <p>Choose a route. The diagram explains what crosses the public internet, what stays private, and what a deployment runner can reach.</p>
+        </Reveal>
+        <InfrastructureMap />
+      </div>
       <ol className="request-story">
         {requestStory.map(([Icon, title, body], index) => (
           <li key={title}><span className="story-number">0{index + 1}</span><Icon size={20} strokeWidth={1.5} /><div><h3>{title}</h3><p>{body}</p></div></li>
@@ -88,7 +90,7 @@ const Home = () => (
       <div className="access-principle"><ShieldCheck size={20} strokeWidth={1.5} /><p><strong>Reachable from anywhere does not mean open to anyone.</strong> People receive separate, revocable identities. They never receive my password, private key, or reusable network key.</p><Link to="/server#trust-model" className="text-link">Read the access model <ArrowUpRight size={15} /></Link></div>
     </section>
 
-    <section className="home-live page-width">
+    <section className="home-live page-width" id="live">
       <ServerStatus compact />
     </section>
 
