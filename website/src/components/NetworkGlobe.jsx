@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
 
-const COUNT = 2600;
+const COUNT = 2100;
 const STAGE_DURATION = 5600;
 const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
 
@@ -15,50 +15,26 @@ const random = (index, salt = 0) => {
   return value - Math.floor(value);
 };
 
-const createArchPointFactory = () => {
+const createArchAsciiPointFactory = () => {
   if (typeof Path2D === "undefined" || typeof document === "undefined") return () => [0, 0, 0];
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
   const path = new Path2D(ARCH_MARK_PATH);
   const samples = [];
-  for (let y = 18; y <= 182; y += 2.6) {
-    for (let x = 23; x <= 189; x += 2.6) {
+  // Treat the official vector as an ASCII-like grid: one evenly spaced cell becomes one point.
+  for (let y = 18; y <= 182; y += 3) {
+    for (let x = 23; x <= 189; x += 3) {
       if (context.isPointInPath(path, x, y)) samples.push([x, y]);
     }
   }
   return (index) => {
-    const sample = samples[Math.floor(random(index, 31) * samples.length)] || [105.8, 99.7];
-    const jitter = 0.012;
+    const sample = samples[index % samples.length] || [105.8, 99.7];
     return [
-      (sample[0] - 105.8) / 43 + (random(index, 32) - 0.5) * jitter,
-      (99.7 - sample[1]) / 43 + (random(index, 33) - 0.5) * jitter,
-      (random(index, 14) - 0.5) * 0.08,
+      ((sample[0] - 105.8) / 43) * 0.88,
+      ((99.7 - sample[1]) / 43) * 0.88,
+      (random(index, 14) - 0.5) * 0.025,
     ];
   };
-};
-
-const createLaptopPointFactory = (archPoint) => (index) => {
-  const section = index % 22;
-  const t = random(index, 1);
-  if (section < 7) {
-    const edge = index % 4;
-    if (edge === 0) return [-2.28 + t * 4.56, 1.62, 0.04];
-    if (edge === 1) return [2.28, -1.22 + t * 2.84, 0.04];
-    if (edge === 2) return [2.28 - t * 4.56, -1.22, 0.04];
-    return [-2.28, 1.62 - t * 2.84, 0.04];
-  }
-  if (section < 16) {
-    const [x, y, z] = archPoint(index);
-    return [x * 0.78, y * 0.64 + 0.2, z + 0.08];
-  }
-  if (section < 19) {
-    const crack = section - 16;
-    const starts = [[-1.78, 1.2], [1.72, 1.08], [-1.9, -0.55]];
-    const ends = [[-0.44, 0.16], [0.38, 0.06], [-0.38, 0.02]];
-    return [starts[crack][0] + (ends[crack][0] - starts[crack][0]) * t, starts[crack][1] + (ends[crack][1] - starts[crack][1]) * t, 0.1];
-  }
-  const depth = random(index, 4);
-  return [-2.72 + t * 5.44, -1.36 - depth * 0.58, (depth - 0.5) * 1.34];
 };
 
 const serverPoint = (index) => {
@@ -106,7 +82,7 @@ const buildShape = (factory) => {
 };
 
 const stages = [
-  ["01", "Broken display", "The panel failed, but the customized Arch system underneath it survived."],
+  ["01", "Arch survived", "The display failed, but the customized Arch system underneath it survived."],
   ["02", "Headless node", "Without a useful screen, the laptop became a small always-on server."],
   ["03", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
 ];
@@ -118,8 +94,8 @@ const NetworkGlobe = () => {
   const [cycleKey, setCycleKey] = useState(0);
   const shouldReduceMotion = useReducedMotion();
   const shapes = useMemo(() => {
-    const archPoint = createArchPointFactory();
-    return [buildShape(createLaptopPointFactory(archPoint)), buildShape(serverPoint), buildShape(networkPoint)];
+    const archPoint = createArchAsciiPointFactory();
+    return [buildShape(archPoint), buildShape(serverPoint), buildShape(networkPoint)];
   }, []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
