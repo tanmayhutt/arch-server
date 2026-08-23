@@ -11,6 +11,19 @@ const random = (index, salt = 0) => {
   return value - Math.floor(value);
 };
 
+const archPoint = (index) => {
+  const y = -1.72 + random(index, 11) * 3.72;
+  const outerHalf = Math.max(0.05, (2 - y) * 0.61);
+  const innerHalf = y < 0.84 ? Math.max(0, (0.84 - y) * 0.35) : 0;
+  const side = random(index, 12) < 0.5 ? -1 : 1;
+  const fill = random(index, 13);
+  const x = innerHalf > 0
+    ? side * (innerHalf + fill * (outerHalf - innerHalf))
+    : (fill * 2 - 1) * outerHalf;
+  const crownCut = y > 1.18 && Math.abs(x) < (y - 1.18) * 0.16;
+  return [crownCut ? x + side * 0.17 : x, y, (random(index, 14) - 0.5) * 0.22];
+};
+
 const laptopPoint = (index) => {
   const section = index % 16;
   const t = random(index, 1);
@@ -22,7 +35,8 @@ const laptopPoint = (index) => {
     return [-2.25, 1.55 - t * 2.7, random(index, 2) * 0.12];
   }
   if (section < 12) {
-    return [-1.98 + t * 3.96, -0.92 + random(index, 3) * 2.16, (random(index, 4) - 0.5) * 0.06];
+    const [x, y, z] = archPoint(index);
+    return [x * 0.72, y * 0.55 + 0.18, z * 0.42 + 0.08];
   }
   const depth = random(index, 4);
   return [-2.65 + t * 5.3, -1.34 - depth * 0.72, (depth - 0.5) * 1.55];
@@ -37,19 +51,6 @@ const serverPoint = (index) => {
   if (face < 4) return [x, y, face % 2 ? 0.58 : -0.58];
   if (face < 6) return [face % 2 ? 1.28 : -1.28, y, z];
   return [x, -1.72 + rack * 0.86, z];
-};
-
-const archPoint = (index) => {
-  const y = -1.72 + random(index, 11) * 3.72;
-  const outerHalf = Math.max(0.05, (2 - y) * 0.61);
-  const innerHalf = y < 0.84 ? Math.max(0, (0.84 - y) * 0.35) : 0;
-  const side = random(index, 12) < 0.5 ? -1 : 1;
-  const fill = random(index, 13);
-  const x = innerHalf > 0
-    ? side * (innerHalf + fill * (outerHalf - innerHalf))
-    : (fill * 2 - 1) * outerHalf;
-  const crownCut = y > 1.18 && Math.abs(x) < (y - 1.18) * 0.16;
-  return [crownCut ? x + side * 0.17 : x, y, (random(index, 14) - 0.5) * 0.22];
 };
 
 const networkPoint = (index) => {
@@ -71,10 +72,9 @@ const buildShape = (factory) => {
 };
 
 const stages = [
-  ["01", "Broken display", "The screen stopped being a dependable way into the machine."],
-  ["02", "Arch survives", "The display failed. The customized Arch system underneath it did not."],
-  ["03", "Headless node", "Arch kept running, so the laptop became a small always-on server."],
-  ["04", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
+  ["01", "Broken display", "The panel failed, but the customized Arch system underneath it survived."],
+  ["02", "Headless node", "Without a useful screen, the laptop became a small always-on server."],
+  ["03", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
 ];
 
 const NetworkGlobe = () => {
@@ -83,7 +83,7 @@ const NetworkGlobe = () => {
   const [active, setActive] = useState(0);
   const [cycleKey, setCycleKey] = useState(0);
   const shouldReduceMotion = useReducedMotion();
-  const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(archPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
+  const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
