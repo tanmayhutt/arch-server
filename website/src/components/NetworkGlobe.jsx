@@ -2,30 +2,42 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
 
-const COUNT = 4600;
+const COUNT = 2600;
 const STAGE_DURATION = 5600;
 const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
+
+// Official one-colour Arch mark from https://archlinux.org/art/.
+// The SVG path is sampled as a point mask instead of approximating the logo with equations.
+const ARCH_MARK_PATH = "M105.8125 16.625c-7.39687 18.135158-11.858304 29.997682-20.09375 47.59375 5.04936 5.35232 11.247211 11.585364 21.3125 18.625-10.821173-4.452846-18.202537-8.923398-23.71875-13.5625-10.5398 21.992913-27.052636 53.32084-60.5625 113.53125 26.337628-15.20517 46.754089-24.57932 65.78125-28.15625-.817034-3.51405-1.28155-7.31518-1.25-11.28125l.03125-.84375c.417917-16.87382 9.195665-29.84979 19.59375-28.96875 10.39809.88104 18.48041 15.28242 18.0625 32.15625-.0786 3.17512-.43674 6.22955-1.0625 9.0625 18.82058 3.68164 39.01873 13.03179 65 28.03125-5.123-9.4318-9.69572-17.93388-14.0625-26.03125-6.87839-5.33121-14.05289-12.2698-28.6875-19.78125 10.05899 2.61375 17.2611 5.62932 22.875 9-44.39803-82.661839-47.99359-93.645891-63.21875-129.375z";
 
 const random = (index, salt = 0) => {
   const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
   return value - Math.floor(value);
 };
 
-const archPoint = (index) => {
-  const y = -1.7 + random(index, 11) * 3.62;
-  const outerHalf = Math.max(0.04, (1.95 - y) * 0.57);
-  const innerHalf = y < 0.68 ? Math.max(0.05, (0.75 - y) * 0.31) : 0;
-  const side = random(index, 12) < 0.5 ? -1 : 1;
-  let x = innerHalf
-    ? side * (innerHalf + random(index, 13) * (outerHalf - innerHalf))
-    : (random(index, 13) * 2 - 1) * outerHalf;
-  // The asymmetric crown notch and lower shoulder make the real Arch silhouette legible.
-  if (y > 1.16 && x > -0.08 && x < (y - 0.98) * 0.2) x += 0.24;
-  if (y < -0.66 && Math.abs(x) < 0.35 + (-y - 0.66) * 0.42) x = side * (0.4 + random(index, 15) * 0.45);
-  return [x, y, (random(index, 14) - 0.5) * 0.12];
+const createArchPointFactory = () => {
+  if (typeof Path2D === "undefined" || typeof document === "undefined") return () => [0, 0, 0];
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  const path = new Path2D(ARCH_MARK_PATH);
+  const samples = [];
+  for (let y = 18; y <= 182; y += 2.6) {
+    for (let x = 23; x <= 189; x += 2.6) {
+      if (context.isPointInPath(path, x, y)) samples.push([x, y]);
+    }
+  }
+  return (index) => {
+    const sample = samples[Math.floor(random(index, 31) * samples.length)] || [105.8, 99.7];
+    const jitter = 0.012;
+    return [
+      (sample[0] - 105.8) / 43 + (random(index, 32) - 0.5) * jitter,
+      (99.7 - sample[1]) / 43 + (random(index, 33) - 0.5) * jitter,
+      (random(index, 14) - 0.5) * 0.08,
+    ];
+  };
 };
 
-const laptopPoint = (index) => {
+const createLaptopPointFactory = (archPoint) => (index) => {
   const section = index % 22;
   const t = random(index, 1);
   if (section < 7) {
@@ -105,7 +117,10 @@ const NetworkGlobe = () => {
   const [active, setActive] = useState(0);
   const [cycleKey, setCycleKey] = useState(0);
   const shouldReduceMotion = useReducedMotion();
-  const shapes = useMemo(() => [buildShape(laptopPoint), buildShape(serverPoint), buildShape(networkPoint)], []);
+  const shapes = useMemo(() => {
+    const archPoint = createArchPointFactory();
+    return [buildShape(createLaptopPointFactory(archPoint)), buildShape(serverPoint), buildShape(networkPoint)];
+  }, []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
@@ -150,7 +165,7 @@ const NetworkGlobe = () => {
       transparent: true,
       depthWrite: false,
       vertexColors: true,
-      uniforms: { pointScale: { value: 34 * Math.min(window.devicePixelRatio || 1, 1.6) } },
+      uniforms: { pointScale: { value: 31 * Math.min(window.devicePixelRatio || 1, 1.6) } },
       vertexShader: `
         uniform float pointScale;
         varying vec3 vColor;
