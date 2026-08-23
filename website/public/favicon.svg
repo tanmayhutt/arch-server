@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <style>
-    .paper{fill:#f2f1ec}.route{fill:none;stroke:#325f6c}.node{fill:#f2f1ec;stroke:#263330}
-    @media (prefers-color-scheme:dark){.paper{fill:#1b211f}.route{stroke:#91bdc7}.node{fill:#1b211f;stroke:#dbe2dd}}
+    .paper{fill:#f2f1ec}.frame{fill:#263330}.arch{fill:#315f73}.screen{fill:#f2f1ec}
+    @media (prefers-color-scheme:dark){.paper{fill:#171c1c}.frame{fill:#dbe2dd}.arch{fill:#91bdc7}.screen{fill:#171c1c}}
   </style>
-  <rect class="paper" width="64" height="64" rx="15"/>
-  <path class="route" d="M16 19C29 19 23 32 34 32S39 45 49 45" stroke-width="3" stroke-linecap="round"/>
-  <circle class="node" cx="16" cy="19" r="6" stroke-width="3"/>
-  <circle class="node" cx="34" cy="32" r="7" stroke-width="3"/>
-  <circle class="node" cx="49" cy="45" r="6" stroke-width="3"/>
+  <rect class="paper" width="64" height="64" rx="10"/>
+  <path class="frame" d="M11 10h42v34H11zm5 5v24h32V15zM7 48h50l-4 6H11z"/>
+  <path class="arch" d="m32 17 10.2 20.2-6.7-4.1-3.7-8.9-3.1 7.2-6.8 4.8z"/>
+  <path class="screen" d="m32 17 1.8 8.5-2-1.4-1.5 2.5-1.6 4.8-1.9 1.6z" opacity=".72"/>
 </svg>

@@ -82,10 +82,15 @@ const Layout = () => {
     let frameId = 0;
     const syncActiveSection = () => {
       frameId = 0;
-      const readingLine = window.scrollY + (window.innerHeight * 0.42);
-      const current = sections.reduce((active, section) => (
-        section.offsetTop <= readingLine ? section : active
-      ), sections[0]);
+      const navBottom = document.querySelector(".site-nav")?.getBoundingClientRect().bottom || 0;
+      const activationLine = navBottom + 32;
+      let current = sections[0];
+      sections.forEach((section) => {
+        if (section.getBoundingClientRect().top <= activationLine) current = section;
+      });
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+        current = sections[sections.length - 1];
+      }
       setActiveSection(current.id);
     };
     const handleScroll = () => {
@@ -95,9 +100,14 @@ const Layout = () => {
     syncActiveSection();
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", handleScroll);
+    window.addEventListener("load", handleScroll);
+    const resizeObserver = new ResizeObserver(handleScroll);
+    sections.forEach((section) => resizeObserver.observe(section));
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("load", handleScroll);
+      resizeObserver.disconnect();
       if (frameId) window.cancelAnimationFrame(frameId);
     };
   }, [pathname]);

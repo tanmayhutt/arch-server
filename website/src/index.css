@@ -1197,7 +1197,7 @@ body {
 .scene-route-deploy { top: 26%; right: 10%; color: var(--amber); }
 .scene-origin { position: absolute; left: 50%; top: 50%; color: #364844; font: 600 9px/1 "JetBrains Mono", monospace; transform: translate(-50%, -50%); }
 
-.transformation-story, .route-section, .jobs-section, .home-live { padding-top: clamp(110px, 13vw, 180px); }
+.transformation-story, .route-section, .jobs-section, .home-live { padding-top: clamp(110px, 13vw, 180px); scroll-margin-top: 90px; }
 .transformation-story { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(60px, 9vw, 130px); align-items: start; }
 .story-intro { position: sticky; top: 106px; }
 .story-intro h2, .editorial-heading h2 {

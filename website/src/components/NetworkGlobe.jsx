@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
 
-const COUNT = 1800;
+const COUNT = 4600;
 const STAGE_DURATION = 5600;
 const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
 
@@ -12,45 +12,67 @@ const random = (index, salt = 0) => {
 };
 
 const archPoint = (index) => {
-  const y = -1.72 + random(index, 11) * 3.72;
-  const outerHalf = Math.max(0.05, (2 - y) * 0.61);
-  const innerHalf = y < 0.84 ? Math.max(0, (0.84 - y) * 0.35) : 0;
+  const y = -1.7 + random(index, 11) * 3.62;
+  const outerHalf = Math.max(0.04, (1.95 - y) * 0.57);
+  const innerHalf = y < 0.68 ? Math.max(0.05, (0.75 - y) * 0.31) : 0;
   const side = random(index, 12) < 0.5 ? -1 : 1;
-  const fill = random(index, 13);
-  const x = innerHalf > 0
-    ? side * (innerHalf + fill * (outerHalf - innerHalf))
-    : (fill * 2 - 1) * outerHalf;
-  const crownCut = y > 1.18 && Math.abs(x) < (y - 1.18) * 0.16;
-  return [crownCut ? x + side * 0.17 : x, y, (random(index, 14) - 0.5) * 0.22];
+  let x = innerHalf
+    ? side * (innerHalf + random(index, 13) * (outerHalf - innerHalf))
+    : (random(index, 13) * 2 - 1) * outerHalf;
+  // The asymmetric crown notch and lower shoulder make the real Arch silhouette legible.
+  if (y > 1.16 && x > -0.08 && x < (y - 0.98) * 0.2) x += 0.24;
+  if (y < -0.66 && Math.abs(x) < 0.35 + (-y - 0.66) * 0.42) x = side * (0.4 + random(index, 15) * 0.45);
+  return [x, y, (random(index, 14) - 0.5) * 0.12];
 };
 
 const laptopPoint = (index) => {
-  const section = index % 16;
+  const section = index % 22;
   const t = random(index, 1);
-  if (section < 6) {
+  if (section < 7) {
     const edge = index % 4;
-    if (edge === 0) return [-2.25 + t * 4.5, 1.55, random(index, 2) * 0.12];
-    if (edge === 1) return [2.25, -1.15 + t * 2.7, random(index, 2) * 0.12];
-    if (edge === 2) return [2.25 - t * 4.5, -1.15, random(index, 2) * 0.12];
-    return [-2.25, 1.55 - t * 2.7, random(index, 2) * 0.12];
+    if (edge === 0) return [-2.28 + t * 4.56, 1.62, 0.04];
+    if (edge === 1) return [2.28, -1.22 + t * 2.84, 0.04];
+    if (edge === 2) return [2.28 - t * 4.56, -1.22, 0.04];
+    return [-2.28, 1.62 - t * 2.84, 0.04];
   }
-  if (section < 12) {
+  if (section < 16) {
     const [x, y, z] = archPoint(index);
-    return [x * 0.72, y * 0.55 + 0.18, z * 0.42 + 0.08];
+    return [x * 0.78, y * 0.64 + 0.2, z + 0.08];
+  }
+  if (section < 19) {
+    const crack = section - 16;
+    const starts = [[-1.78, 1.2], [1.72, 1.08], [-1.9, -0.55]];
+    const ends = [[-0.44, 0.16], [0.38, 0.06], [-0.38, 0.02]];
+    return [starts[crack][0] + (ends[crack][0] - starts[crack][0]) * t, starts[crack][1] + (ends[crack][1] - starts[crack][1]) * t, 0.1];
   }
   const depth = random(index, 4);
-  return [-2.65 + t * 5.3, -1.34 - depth * 0.72, (depth - 0.5) * 1.55];
+  return [-2.72 + t * 5.44, -1.36 - depth * 0.58, (depth - 0.5) * 1.34];
 };
 
 const serverPoint = (index) => {
-  const rack = index % 5;
-  const face = index % 8;
-  const x = -1.28 + random(index, 5) * 2.56;
-  const y = -1.72 + rack * 0.86 + random(index, 6) * 0.48;
-  const z = (random(index, 7) - 0.5) * 1.18;
-  if (face < 4) return [x, y, face % 2 ? 0.58 : -0.58];
-  if (face < 6) return [face % 2 ? 1.28 : -1.28, y, z];
-  return [x, -1.72 + rack * 0.86, z];
+  const section = index % 20;
+  const x = -1.62 + random(index, 5) * 3.24;
+  const y = -1.78 + random(index, 6) * 3.56;
+  const z = (random(index, 7) - 0.5) * 0.8;
+  if (section < 6) {
+    const edge = section % 4;
+    if (edge === 0) return [x, 1.78, z];
+    if (edge === 1) return [1.62, y, z];
+    if (edge === 2) return [x, -1.78, z];
+    return [-1.62, y, z];
+  }
+  if (section < 15) {
+    const bay = Math.floor(random(index, 18) * 4);
+    const bayY = 1.22 - bay * 0.78;
+    const edge = index % 4;
+    if (edge === 0) return [-1.28 + random(index, 19) * 2.12, bayY + 0.25, 0.45];
+    if (edge === 1) return [0.84, bayY - 0.25 + random(index, 19) * 0.5, 0.45];
+    if (edge === 2) return [0.84 - random(index, 19) * 2.12, bayY - 0.25, 0.45];
+    return [-1.28, bayY + 0.25 - random(index, 19) * 0.5, 0.45];
+  }
+  const port = Math.floor(random(index, 20) * 4);
+  const angle = random(index, 21) * Math.PI * 2;
+  return [1.18 + Math.cos(angle) * 0.1, 1.18 - port * 0.77 + Math.sin(angle) * 0.1, 0.5];
 };
 
 const networkPoint = (index) => {
@@ -124,7 +146,30 @@ const NetworkGlobe = () => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    const material = new THREE.PointsMaterial({ size: 0.047, sizeAttenuation: true, transparent: true, opacity: 0.9, vertexColors: true, depthWrite: false });
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      vertexColors: true,
+      uniforms: { pointScale: { value: 34 * Math.min(window.devicePixelRatio || 1, 1.6) } },
+      vertexShader: `
+        uniform float pointScale;
+        varying vec3 vColor;
+        void main() {
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = pointScale / max(4.5, -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          vec2 centered = gl_PointCoord - vec2(0.5);
+          if (dot(centered, centered) > 0.22) discard;
+          gl_FragColor = vec4(vColor, 0.92);
+        }
+      `,
+    });
     const cloud = new THREE.Points(geometry, material);
     scene.add(cloud);
 
@@ -132,9 +177,9 @@ const NetworkGlobe = () => {
     const routeMaterials = [];
     const routeColors = [0x315f73, 0x477b68, 0xa66a42];
     const routeCurves = [
-      [[-2.05, 0.62, 0.25], [-0.72, 2.75, 0.72], [1.4, 1.78, 0.2]],
-      [[-1.95, -0.78, 0.28], [-0.35, -2.8, 0.85], [1.78, -1.32, 0.12]],
-      [[1.4, 1.78, 0.2], [2.9, 0.55, 0.72], [1.78, -1.32, 0.12]],
+      [[-1.92, 0.68, 1.08], [-0.58, 2.72, 2.68], [1.34, 1.7, 1.22]],
+      [[-1.88, -0.76, 1.12], [-0.28, -2.72, 2.72], [1.68, -1.3, 1.02]],
+      [[1.34, 1.7, 1.22], [2.82, 0.48, 2.62], [1.68, -1.3, 1.02]],
     ];
     routeCurves.forEach(([start, control, end], index) => {
       const curve = new THREE.QuadraticBezierCurve3(
@@ -142,21 +187,27 @@ const NetworkGlobe = () => {
         new THREE.Vector3(...control),
         new THREE.Vector3(...end),
       );
-      const routeGeometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(52));
-      const routeMaterial = new THREE.LineBasicMaterial({ color: routeColors[index], transparent: true, opacity: 0 });
+      const routeGeometry = new THREE.TubeGeometry(curve, 64, 0.018, 5, false);
+      const routeMaterial = new THREE.MeshBasicMaterial({
+        color: routeColors[index], transparent: true, opacity: 0, depthTest: false,
+      });
       routeMaterials.push(routeMaterial);
-      routeGroup.add(new THREE.Line(routeGeometry, routeMaterial));
+      const route = new THREE.Mesh(routeGeometry, routeMaterial);
+      route.renderOrder = 3;
+      routeGroup.add(route);
     });
     const nodeGeometry = new THREE.BufferGeometry();
     nodeGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
-      -2.05, 0.62, 0.25, -1.95, -0.78, 0.28, 1.4, 1.78, 0.2, 1.78, -1.32, 0.12,
+      -1.92, 0.68, 1.08, -1.88, -0.76, 1.12, 1.34, 1.7, 1.22, 1.68, -1.3, 1.02,
     ], 3));
-    const nodeMaterial = new THREE.PointsMaterial({ color: 0x274f60, size: 0.13, transparent: true, opacity: 0, depthWrite: false });
+    const nodeMaterial = new THREE.PointsMaterial({
+      color: 0x274f60, size: 0.15, transparent: true, opacity: 0, depthWrite: false, depthTest: false,
+    });
     routeMaterials.push(nodeMaterial);
     routeGroup.add(new THREE.Points(nodeGeometry, nodeMaterial));
     scene.add(routeGroup);
 
-    const pointer = { x: 20, y: 20, active: false };
+    const pointer = { x: 20, y: 20, targetX: 20, targetY: 20, active: false, speed: 0 };
     const resize = () => {
       const { width, height } = mount.getBoundingClientRect();
       renderer.setSize(Math.max(1, width), Math.max(1, height), false);
@@ -165,8 +216,11 @@ const NetworkGlobe = () => {
     };
     const onPointerMove = (event) => {
       const rect = mount.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width - 0.5) * 7.4;
-      pointer.y = -((event.clientY - rect.top) / rect.height - 0.5) * 5.2;
+      const nextX = ((event.clientX - rect.left) / rect.width - 0.5) * 7.4;
+      const nextY = -((event.clientY - rect.top) / rect.height - 0.5) * 5.2;
+      pointer.speed = Math.min(1.8, Math.hypot(nextX - pointer.targetX, nextY - pointer.targetY));
+      pointer.targetX = nextX;
+      pointer.targetY = nextY;
       pointer.active = true;
     };
     const onPointerLeave = () => { pointer.active = false; };
@@ -188,6 +242,9 @@ const NetworkGlobe = () => {
       const now = performance.now();
       const delta = Math.min((now - previousTime) / 16.667, 2);
       previousTime = now;
+      pointer.x += (pointer.targetX - pointer.x) * 0.16 * delta;
+      pointer.y += (pointer.targetY - pointer.y) * 0.16 * delta;
+      pointer.speed *= Math.pow(0.82, delta);
       const target = shapes[activeRef.current];
       const attribute = geometry.attributes.position;
       const array = attribute.array;
@@ -206,8 +263,8 @@ const NetworkGlobe = () => {
           const dx = array[offset] - pointer.x;
           const dy = array[offset + 1] - pointer.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 1.15) {
-            const force = (1.15 - distance) * 0.042;
+          if (distance < 1.28) {
+            const force = (1.28 - distance) * (0.032 + pointer.speed * 0.028);
             velocities[offset] += (dx / Math.max(distance, 0.08)) * force * delta;
             velocities[offset + 1] += (dy / Math.max(distance, 0.08)) * force * delta;
             velocities[offset + 2] += (random(index, 10) - 0.5) * force * delta;
@@ -224,8 +281,10 @@ const NetworkGlobe = () => {
       const connected = activeRef.current === stages.length - 1;
       routeOpacity += ((connected ? 0.72 : 0) - routeOpacity) * 0.055 * delta;
       routeMaterials.forEach((routeMaterial, index) => { routeMaterial.opacity = index === routeMaterials.length - 1 ? routeOpacity : routeOpacity * 0.78; });
-      cloud.rotation.y += pointer.active && connected ? 0.0018 * delta : 0;
-      cloud.rotation.x += ((pointer.active ? pointer.y * -0.018 : 0) - cloud.rotation.x) * 0.025 * delta;
+      const targetRotationY = pointer.active ? pointer.x * 0.022 : 0;
+      const targetRotationX = pointer.active ? pointer.y * -0.018 : 0;
+      cloud.rotation.y += (targetRotationY - cloud.rotation.y) * 0.032 * delta;
+      cloud.rotation.x += (targetRotationX - cloud.rotation.x) * 0.032 * delta;
       routeGroup.rotation.copy(cloud.rotation);
       attribute.needsUpdate = true;
       renderer.render(scene, camera);
