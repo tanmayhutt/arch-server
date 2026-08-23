@@ -1117,7 +1117,7 @@ body {
 }
 .machine-scene {
   position: relative;
-  min-height: 610px;
+  min-height: 690px;
   overflow: hidden;
   border-block: 1px solid var(--line-strong);
   background: rgba(250, 249, 245, 0.58);
@@ -1139,7 +1139,7 @@ body {
   background-size: 52px 52px;
   mask-image: linear-gradient(to bottom, black 0 67%, transparent 88%);
 }
-.machine-scene-canvas { position: absolute; inset: 0 0 150px; cursor: crosshair; touch-action: pan-y; }
+.machine-scene-canvas { position: absolute; inset: 0 0 224px; cursor: crosshair; touch-action: pan-y; }
 .machine-scene-canvas canvas { display: block; width: 100%; height: 100%; }
 .scene-stage-picker {
   position: absolute;
@@ -1148,19 +1148,19 @@ body {
   bottom: 48px;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--line);
 }
 .scene-stage-picker button {
   position: relative;
   overflow: hidden;
   min-width: 0;
-  min-height: 112px;
+  min-height: 88px;
   display: grid;
   grid-template-columns: 28px 1fr;
   align-content: start;
   gap: 7px 9px;
-  padding: 17px 15px;
+  padding: 13px 14px;
   color: var(--muted);
   text-align: left;
   border: 0;
@@ -1170,6 +1170,8 @@ body {
   transition: background 180ms ease, color 180ms ease;
 }
 .scene-stage-picker button:last-child { border-right: 0; }
+.scene-stage-picker button:nth-child(4) { border-right: 0; }
+.scene-stage-picker button:nth-child(-n + 4) { border-bottom: 1px solid var(--line); }
 .scene-stage-picker button:hover, .scene-stage-picker button.active { color: var(--text); background: #fdfcf8; }
 .scene-stage-picker button.active { box-shadow: inset 0 2px var(--ice); }
 .scene-stage-picker span { color: var(--subtle); font: 600 9px/1.4 "JetBrains Mono", monospace; }
@@ -1188,7 +1190,7 @@ body {
 }
 @keyframes stage-progress { to { transform: scaleX(1); } }
 .scene-instruction { position: absolute; z-index: 3; bottom: 13px; left: 15px; margin: 0; color: var(--quiet); font: 500 9px/1.4 "JetBrains Mono", monospace; }
-.scene-route-labels { position: absolute; z-index: 2; inset: 0 0 150px; pointer-events: none; }
+.scene-route-labels { position: absolute; z-index: 2; inset: 0 0 224px; pointer-events: none; }
 .scene-route { position: absolute; display: grid; gap: 3px; padding-left: 13px; color: var(--text); font: 600 10px/1.2 "JetBrains Mono", monospace; }
 .scene-route::before { content: ""; position: absolute; left: 0; top: 3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .scene-route small { color: var(--subtle); font-size: 8px; font-weight: 500; }
@@ -1290,7 +1292,7 @@ body {
   .page-width { width: min(100% - 40px, 1240px); }
   .hero-section { min-height: 0; grid-template-columns: 1fr; padding-top: 82px; }
   .hero-copy { max-width: 760px; }
-  .machine-scene { min-height: 590px; }
+  .machine-scene { min-height: 670px; }
   .transformation-story { grid-template-columns: 1fr; }
   .story-intro { position: static; max-width: 760px; }
   .story-more { grid-column: 1; }
@@ -1305,15 +1307,17 @@ body {
   .hero-copy h1 { font-size: clamp(52px, 16vw, 76px); }
   .hero-lead { font-size: 16px; }
   .machine-kicker { font-size: 8px; }
-  .machine-scene { min-height: 570px; }
-  .machine-scene-canvas { bottom: 238px; }
-  .scene-stage-picker { bottom: 43px; grid-template-columns: 1fr; }
-  .scene-stage-picker button { min-height: 63px; grid-template-columns: 26px 0.65fr 1.35fr; align-items: start; border-right: 0; border-bottom: 1px solid var(--line); padding: 11px 12px; }
-  .scene-stage-picker button:last-child { border-bottom: 0; }
-  .scene-stage-picker button.active { box-shadow: inset 2px 0 var(--ice); }
-  .scene-stage-picker small { grid-column: 3; }
+  .machine-scene { min-height: 590px; }
+  .machine-scene-canvas { bottom: 164px; }
+  .scene-stage-picker { bottom: 39px; grid-template-columns: repeat(8, minmax(230px, 72vw)); overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; scroll-snap-type: x proximity; }
+  .scene-stage-picker button { min-height: 116px; grid-template-columns: 26px 1fr; align-items: start; border-right: 1px solid var(--line); border-bottom: 0; padding: 13px 12px; scroll-snap-align: start; }
+  .scene-stage-picker button:nth-child(4) { border-right: 1px solid var(--line); }
+  .scene-stage-picker button:nth-child(-n + 4) { border-bottom: 0; }
+  .scene-stage-picker button:last-child { border-right: 0; }
+  .scene-stage-picker button.active { box-shadow: inset 0 2px var(--ice); }
+  .scene-stage-picker small { grid-column: 2; }
   .scene-instruction { font-size: 8px; }
-  .scene-route-labels { bottom: 238px; }
+  .scene-route-labels { bottom: 164px; }
   .transformation-story, .route-section, .jobs-section, .home-live { padding-top: 105px; }
   .story-intro h2, .editorial-heading h2, .route-section .editorial-heading h2 { font-size: clamp(38px, 12vw, 56px); }
   .route-tabs button { justify-content: center; padding-inline: 8px; font-size: 10px; }

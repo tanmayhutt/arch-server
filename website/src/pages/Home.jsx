@@ -41,7 +41,7 @@ const Home = () => (
         </div>
       </div>
       <div className="hero-machine">
-        <div className="machine-kicker"><span>Interactive system model</span><span>Three states / one machine</span></div>
+        <div className="machine-kicker"><span>Interactive system model</span><span>Eight chapters / one machine</span></div>
         <Suspense fallback={<div className="machine-scene machine-scene-loading" aria-label="Loading interactive system model" />}>
           <NetworkGlobe />
         </Suspense>

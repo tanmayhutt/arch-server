@@ -37,31 +37,109 @@ const createArchAsciiPointFactory = () => {
   };
 };
 
-const serverPoint = (index) => {
-  const section = index % 20;
-  const x = -1.62 + random(index, 5) * 3.24;
-  const y = -1.78 + random(index, 6) * 3.56;
-  const z = (random(index, 7) - 0.5) * 0.8;
-  if (section < 6) {
-    const edge = section % 4;
-    if (edge === 0) return [x, 1.78, z];
-    if (edge === 1) return [1.62, y, z];
-    if (edge === 2) return [x, -1.78, z];
-    return [-1.62, y, z];
+const createGridShapeFactory = ({ bounds, step = 0.065, contains, depth = 0.05 }) => {
+  const [minX, maxX, minY, maxY] = bounds;
+  const samples = [];
+  for (let y = minY; y <= maxY; y += step) {
+    for (let x = minX; x <= maxX; x += step) {
+      if (contains(x, y)) samples.push([x, y]);
+    }
   }
-  if (section < 15) {
-    const bay = Math.floor(random(index, 18) * 4);
-    const bayY = 1.22 - bay * 0.78;
-    const edge = index % 4;
-    if (edge === 0) return [-1.28 + random(index, 19) * 2.12, bayY + 0.25, 0.45];
-    if (edge === 1) return [0.84, bayY - 0.25 + random(index, 19) * 0.5, 0.45];
-    if (edge === 2) return [0.84 - random(index, 19) * 2.12, bayY - 0.25, 0.45];
-    return [-1.28, bayY + 0.25 - random(index, 19) * 0.5, 0.45];
-  }
-  const port = Math.floor(random(index, 20) * 4);
-  const angle = random(index, 21) * Math.PI * 2;
-  return [1.18 + Math.cos(angle) * 0.1, 1.18 - port * 0.77 + Math.sin(angle) * 0.1, 0.5];
+  return (index) => {
+    const sample = samples[index % samples.length] || [0, 0];
+    return [sample[0], sample[1], (random(index, 27) - 0.5) * depth];
+  };
 };
+
+const inRect = (x, y, left, right, bottom, top) => x >= left && x <= right && y >= bottom && y <= top;
+const nearLine = (x, y, ax, ay, bx, by, width = 0.055) => {
+  const abX = bx - ax;
+  const abY = by - ay;
+  const projection = Math.max(0, Math.min(1, ((x - ax) * abX + (y - ay) * abY) / (abX * abX + abY * abY)));
+  return Math.hypot(x - (ax + abX * projection), y - (ay + abY * projection)) <= width;
+};
+const inCircle = (x, y, cx, cy, radius) => Math.hypot(x - cx, y - cy) <= radius;
+
+const failedDisplayPoint = createGridShapeFactory({
+  bounds: [-2.25, 2.25, -1.6, 1.6],
+  contains: (x, y) => {
+    const frame = inRect(x, y, -2.05, 2.05, -1.32, 1.42)
+      && !inRect(x, y, -1.89, 1.89, -1.16, 1.26);
+    const stand = inRect(x, y, -0.13, 0.13, -1.58, -1.28) || inRect(x, y, -0.72, 0.72, -1.6, -1.5);
+    const breakMark = nearLine(x, y, -0.42, 0.82, 0.12, 0.18, 0.07)
+      || nearLine(x, y, 0.12, 0.18, -0.18, -0.18, 0.07)
+      || nearLine(x, y, 0.12, 0.18, 0.62, -0.48, 0.07);
+    return frame || stand || breakMark;
+  },
+});
+
+const headlessPoint = createGridShapeFactory({
+  bounds: [-2.25, 2.25, -1.35, 1.35],
+  contains: (x, y) => {
+    const lid = inRect(x, y, -1.82, 1.82, -0.56, 0.72)
+      && !inRect(x, y, -1.66, 1.66, -0.4, 0.56);
+    const base = nearLine(x, y, -2.12, -0.72, 2.12, -0.72, 0.1)
+      || nearLine(x, y, -2.12, -0.72, -1.54, -1.02, 0.1)
+      || nearLine(x, y, 2.12, -0.72, 1.54, -1.02, 0.1)
+      || nearLine(x, y, -1.54, -1.02, 1.54, -1.02, 0.1);
+    const status = inCircle(x, y, 1.42, -0.02, 0.11);
+    return lid || base || status;
+  },
+});
+
+const containerPoint = createGridShapeFactory({
+  bounds: [-2.3, 2.3, -1.55, 1.55],
+  contains: (x, y) => {
+    const shell = inRect(x, y, -2.05, 2.05, -1.33, 1.33)
+      && !inRect(x, y, -1.89, 1.89, -1.17, 1.17);
+    const divider = Math.abs(x) <= 0.055 || Math.abs(y) <= 0.055;
+    const ports = [-0.72, -0.24, 0.24, 0.72].some((cy) => inCircle(x, y, 1.5, cy, 0.075));
+    return shell || divider || ports;
+  },
+});
+
+const cloudflarePoint = createGridShapeFactory({
+  bounds: [-2.35, 2.35, -1.75, 1.75],
+  contains: (x, y) => {
+    const cloud = inCircle(x, y, -0.82, 0.36, 0.72)
+      || inCircle(x, y, 0.05, 0.72, 1.02)
+      || inCircle(x, y, 1.02, 0.28, 0.76)
+      || inRect(x, y, -1.45, 1.58, -0.08, 0.42);
+    const tunnel = nearLine(x, y, 0, -0.12, 0, -1.28, 0.085)
+      || nearLine(x, y, -0.27, -1.02, 0, -1.3, 0.085)
+      || nearLine(x, y, 0.27, -1.02, 0, -1.3, 0.085);
+    return cloud || tunnel;
+  },
+});
+
+const tailscalePoint = createGridShapeFactory({
+  bounds: [-2.15, 2.15, -1.8, 1.8],
+  step: 0.055,
+  contains: (x, y) => {
+    const nodes = [-1, 0, 1].some((cx) => [-1, 0, 1].some((cy) => inCircle(x, y, cx, cy, 0.24)));
+    const links = nearLine(x, y, -1, -1, 1, 1, 0.035)
+      || nearLine(x, y, -1, 1, 1, -1, 0.035)
+      || nearLine(x, y, -1, 0, 1, 0, 0.035)
+      || nearLine(x, y, 0, -1, 0, 1, 0.035);
+    return nodes || links;
+  },
+});
+
+const deploymentPoint = createGridShapeFactory({
+  bounds: [-2.25, 2.25, -1.65, 1.65],
+  contains: (x, y) => {
+    const pipeline = nearLine(x, y, -1.6, 0.92, -0.52, 0.92, 0.06)
+      || nearLine(x, y, -0.52, 0.92, 0.12, 0, 0.06)
+      || nearLine(x, y, 0.12, 0, 1.38, 0, 0.06)
+      || nearLine(x, y, 1.38, 0, 1.08, 0.25, 0.06)
+      || nearLine(x, y, 1.38, 0, 1.08, -0.25, 0.06);
+    const branch = nearLine(x, y, -0.52, 0.92, -0.52, -0.82, 0.06)
+      || nearLine(x, y, -0.52, -0.82, 0.34, -0.82, 0.06);
+    const nodes = [[-1.6, 0.92], [-0.52, 0.92], [-0.52, -0.82], [0.34, -0.82], [0.12, 0], [1.38, 0]]
+      .some(([cx, cy]) => inCircle(x, y, cx, cy, 0.14));
+    return pipeline || branch || nodes;
+  },
+});
 
 const networkPoint = (index) => {
   const phi = Math.acos(1 - 2 * ((index + 0.5) / COUNT));
@@ -82,9 +160,14 @@ const buildShape = (factory) => {
 };
 
 const stages = [
-  ["01", "Arch survived", "The display failed, but the customized Arch system underneath it survived."],
-  ["02", "Headless node", "Without a useful screen, the laptop became a small always-on server."],
-  ["03", "Connected system", "Cloudflare, Tailscale, and GitHub now give it three deliberate routes."],
+  ["01", "The display failed", "The panel stopped being useful, but the laptop itself was still healthy."],
+  ["02", "Arch survived", "The customized Arch system underneath the broken display was still mine."],
+  ["03", "It went headless", "I closed the lid on desktop life and kept the machine running without a screen."],
+  ["04", "Services moved in", "Docker isolates the workloads; Nginx serves this React site from the machine."],
+  ["05", "The public route", "Cloudflared makes an outbound tunnel, so Cloudflare can deliver the site without an open router port."],
+  ["06", "The private route", "Tailscale gives trusted devices a private mesh for SSH, Samba, and administration."],
+  ["07", "The deploy route", "A push lets GitHub Actions join as ephemeral CI, reach only SSH, and rebuild the Compose stack."],
+  ["08", "One connected node", "The old laptop is now a physical Arch server with separate public, private, and deployment paths."],
 ];
 
 const NetworkGlobe = () => {
@@ -95,7 +178,16 @@ const NetworkGlobe = () => {
   const shouldReduceMotion = useReducedMotion();
   const shapes = useMemo(() => {
     const archPoint = createArchAsciiPointFactory();
-    return [buildShape(archPoint), buildShape(serverPoint), buildShape(networkPoint)];
+    return [
+      buildShape(failedDisplayPoint),
+      buildShape(archPoint),
+      buildShape(headlessPoint),
+      buildShape(containerPoint),
+      buildShape(cloudflarePoint),
+      buildShape(tailscalePoint),
+      buildShape(deploymentPoint),
+      buildShape(networkPoint),
+    ];
   }, []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
@@ -307,7 +399,7 @@ const NetworkGlobe = () => {
           <span className="scene-origin">Lenovo / Arch</span>
         </div>
       )}
-      <div className="scene-stage-picker" role="group" aria-label="The laptop's transformation">
+      <div className="scene-stage-picker" role="group" aria-label="The Arch server story">
         {stages.map(([number, title, detail], index) => (
           <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => selectStage(index)} aria-pressed={active === index}>
             <span>{number}</span><strong>{title}</strong><small>{detail}</small>
@@ -315,7 +407,7 @@ const NetworkGlobe = () => {
           </button>
         ))}
       </div>
-      <p className="scene-instruction">The story advances automatically. Select a stage or move through the particles to interrupt it.</p>
+      <p className="scene-instruction">The same particles tell the whole story. It advances automatically, or you can choose any chapter.</p>
     </div>
   );
 };
