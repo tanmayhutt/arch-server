@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
+import { Pause, Play } from "lucide-react";
 import * as THREE from "three";
 
 const COUNT = 2100;
@@ -175,6 +176,7 @@ const NetworkGlobe = () => {
   const activeRef = useRef(0);
   const [active, setActive] = useState(0);
   const [cycleKey, setCycleKey] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
   const shouldReduceMotion = useReducedMotion();
   const shapes = useMemo(() => {
     const archPoint = createArchAsciiPointFactory();
@@ -193,16 +195,21 @@ const NetworkGlobe = () => {
   useEffect(() => { activeRef.current = active; }, [active]);
 
   useEffect(() => {
-    if (shouldReduceMotion) return undefined;
+    if (shouldReduceMotion || !isPlaying) return undefined;
     const timer = window.setTimeout(() => {
       setActive((current) => (current + 1) % stages.length);
       setCycleKey((current) => current + 1);
     }, STAGE_DURATION);
     return () => window.clearTimeout(timer);
-  }, [active, cycleKey, shouldReduceMotion]);
+  }, [active, cycleKey, isPlaying, shouldReduceMotion]);
 
   const selectStage = (index) => {
     setActive(index);
+    setCycleKey((current) => current + 1);
+  };
+
+  const togglePlayback = () => {
+    setIsPlaying((current) => !current);
     setCycleKey((current) => current + 1);
   };
 
@@ -389,25 +396,38 @@ const NetworkGlobe = () => {
   }, [shapes, shouldReduceMotion]);
 
   return (
-    <div className="machine-scene">
-      <div ref={mountRef} className="machine-scene-canvas" aria-hidden="true" />
-      {active === stages.length - 1 && (
-        <div className="scene-route-labels" aria-hidden="true">
-          <span className="scene-route scene-route-public">Cloudflare<small>public ingress</small></span>
-          <span className="scene-route scene-route-private">Tailscale<small>private admin</small></span>
-          <span className="scene-route scene-route-deploy">GitHub<small>deployment</small></span>
-          <span className="scene-origin">Lenovo / Arch</span>
-        </div>
-      )}
-      <div className="scene-stage-picker" role="group" aria-label="The Arch server story">
-        {stages.map(([number, title, detail], index) => (
-          <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => selectStage(index)} aria-pressed={active === index}>
-            <span>{number}</span><strong>{title}</strong><small>{detail}</small>
-            {active === index && !shouldReduceMotion && <span key={`${active}-${cycleKey}`} className="stage-progress" aria-hidden="true" />}
-          </button>
-        ))}
+    <div className="machine-scene" data-stage={active + 1}>
+      <div className="machine-scene-visual">
+        <div ref={mountRef} className="machine-scene-canvas" aria-hidden="true" />
+        {active === stages.length - 1 && (
+          <div className="scene-route-labels" aria-hidden="true">
+            <span className="scene-route scene-route-public">Cloudflare<small>public ingress</small></span>
+            <span className="scene-route scene-route-private">Tailscale<small>private admin</small></span>
+            <span className="scene-route scene-route-deploy">GitHub<small>deployment</small></span>
+            <span className="scene-origin">Lenovo / Arch</span>
+          </div>
+        )}
       </div>
-      <p className="scene-instruction">The same particles tell the whole story. It advances automatically, or you can choose any chapter.</p>
+      <div className="scene-story-control">
+        <div className="scene-active-copy" aria-live="polite">
+          <span>{stages[active][0]} / 08</span>
+          <div><strong>{stages[active][1]}</strong><p>{stages[active][2]}</p></div>
+          {!shouldReduceMotion && (
+            <button type="button" className="scene-playback" onClick={togglePlayback} aria-label={isPlaying ? "Pause automatic story" : "Play automatic story"}>
+              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+              <span>{isPlaying ? "Pause" : "Play"}</span>
+            </button>
+          )}
+        </div>
+        <div className="scene-stage-picker" role="group" aria-label="Choose a chapter in the Arch server story">
+          {stages.map(([number, title], index) => (
+            <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => selectStage(index)} aria-pressed={active === index}>
+              <span>{number}</span><strong>{title}</strong>
+              {active === index && isPlaying && !shouldReduceMotion && <span key={`${active}-${cycleKey}`} className="stage-progress" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
