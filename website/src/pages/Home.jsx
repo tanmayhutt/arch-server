@@ -32,7 +32,7 @@ const Home = () => (
     <section className="hero-section page-width" id="home">
       <div className="hero-copy">
         <div className="eyebrow">A broken display became a working piece of infrastructure</div>
-        <h1>The laptop became a node.</h1>
+        <h1>The laptop became <span>a node.</span></h1>
         <p className="hero-lead">My old Arch Linux laptop stores files, accepts a private shell, deploys projects, and serves this website about itself.</p>
         <p className="origin-proof">This page travelled from a Lenovo IdeaPad on my desk in India, through an outbound Cloudflare tunnel, to your browser.</p>
         <div className="hero-actions">
@@ -41,10 +41,15 @@ const Home = () => (
         </div>
       </div>
       <div className="hero-machine">
-        <div className="machine-kicker"><span>Interactive system model</span><span>Eight chapters / one machine</span></div>
+        <div className="machine-kicker"><span>Interactive system model</span><span>Move through the particles</span><span>Eight chapters / one machine</span></div>
         <Suspense fallback={<div className="machine-scene machine-scene-loading" aria-label="Loading interactive system model" />}>
           <NetworkGlobe />
         </Suspense>
+      </div>
+      <div className="hero-signal-rail" aria-label="System summary">
+        <span><b>01</b> Physical Arch origin</span>
+        <span><b>02</b> No open router ports</span>
+        <span><b>03</b> Three isolated trust routes</span>
       </div>
     </section>
 

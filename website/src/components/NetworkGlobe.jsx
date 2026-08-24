@@ -4,7 +4,7 @@ import { Pause, Play } from "lucide-react";
 import * as THREE from "three";
 
 const COUNT = 2100;
-const STAGE_DURATION = 5600;
+const STAGE_DURATION = 4000;
 const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
 
 // Official one-colour Arch mark from https://archlinux.org/art/.
@@ -218,7 +218,7 @@ const NetworkGlobe = () => {
     if (!mount) return undefined;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(0, 0, 8.7);
+    camera.position.set(0, 0, 8.15);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
     renderer.setClearColor(0x000000, 0);
@@ -240,7 +240,7 @@ const NetworkGlobe = () => {
       transparent: true,
       depthWrite: false,
       vertexColors: true,
-      uniforms: { pointScale: { value: 31 * Math.min(window.devicePixelRatio || 1, 1.6) } },
+      uniforms: { pointScale: { value: 32 * Math.min(window.devicePixelRatio || 1, 1.6) } },
       vertexShader: `
         uniform float pointScale;
         varying vec3 vColor;
@@ -346,9 +346,9 @@ const NetworkGlobe = () => {
           array[offset + 2] = target[offset + 2];
           continue;
         }
-        velocities[offset] += (target[offset] - array[offset]) * 0.026 * delta;
-        velocities[offset + 1] += (target[offset + 1] - array[offset + 1]) * 0.026 * delta;
-        velocities[offset + 2] += (target[offset + 2] - array[offset + 2]) * 0.026 * delta;
+        velocities[offset] += (target[offset] - array[offset]) * 0.036 * delta;
+        velocities[offset + 1] += (target[offset + 1] - array[offset + 1]) * 0.036 * delta;
+        velocities[offset + 2] += (target[offset + 2] - array[offset + 2]) * 0.036 * delta;
         if (pointer.active) {
           const dx = array[offset] - pointer.x;
           const dy = array[offset + 1] - pointer.y;
@@ -360,7 +360,7 @@ const NetworkGlobe = () => {
             velocities[offset + 2] += (random(index, 10) - 0.5) * force * delta;
           }
         }
-        const damping = Math.pow(0.88, delta);
+        const damping = Math.pow(0.865, delta);
         velocities[offset] *= damping;
         velocities[offset + 1] *= damping;
         velocities[offset + 2] *= damping;
@@ -398,6 +398,9 @@ const NetworkGlobe = () => {
   return (
     <div className="machine-scene" data-stage={active + 1}>
       <div className="machine-scene-visual">
+        <div className="scene-light-aperture" aria-hidden="true" />
+        <span className="scene-axis scene-axis-x" aria-hidden="true">X / TRANSFORMATION</span>
+        <span className="scene-axis scene-axis-y" aria-hidden="true">Y / MACHINE STATE</span>
         <div ref={mountRef} className="machine-scene-canvas" aria-hidden="true" />
         {active === stages.length - 1 && (
           <div className="scene-route-labels" aria-hidden="true">
