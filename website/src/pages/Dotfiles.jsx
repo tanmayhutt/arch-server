@@ -1,5 +1,5 @@
 import { ArrowUpRight, Code2, Gauge, Keyboard, Monitor, Settings2, Terminal } from "lucide-react";
-import hyprlandImg from "../../../assets/hyprland-redacted.jpg";
+import hyprlandImg from "../../../assets/hyprland.png";
 
 const desktopLayers = [
   ["01", "Hyprland", "Wayland compositor", "Dynamic tiling with 10 px inner gaps, 15 px outer gaps, and 20 px rounding"],
@@ -39,8 +39,8 @@ const Dotfiles = () => (
 
     <section className="page-width desktop-evidence">
       <div className="panel-chrome"><span>LOCAL DISPLAY CAPTURE</span><span>hyprland.session</span></div>
-      <div className="desktop-image-wrap"><img src={hyprlandImg} alt="Privacy-redacted capture of the Hyprland desktop retained on the Arch Linux machine" /></div>
-      <div className="desktop-caption"><span>DISPLAY STACK / WAYLAND</span><p>Original local session with private identifiers masked. The graphical environment is not part of the public serving path.</p></div>
+      <div className="desktop-image-wrap"><img src={hyprlandImg} alt="Hyprland desktop retained on the Arch Linux machine" /></div>
+      <div className="desktop-caption"><span>DISPLAY STACK / WAYLAND</span><p>Original local session captured at full resolution. The graphical environment is not part of the public serving path.</p></div>
     </section>
 
     <section className="section-block page-width">

@@ -1,5 +1,5 @@
 import { ArrowUpRight, Code2, MonitorOff, Palette, Server, Wrench } from "lucide-react";
-import hyprlandImg from "../../../assets/hyprland-redacted.jpg";
+import hyprlandImg from "../../../assets/hyprland.png";
 
 const chapters = [
   {
@@ -39,7 +39,7 @@ const About = () => (
     </header>
 
     <section className="page-width about-image">
-      <img src={hyprlandImg} alt="Privacy-redacted capture of Tanmay's customized Arch Linux and Hyprland desktop" />
+      <img src={hyprlandImg} alt="Tanmay's customized Arch Linux and Hyprland desktop" />
       <div><span>BEFORE THE SERVER</span><p>The Hyprland desktop that taught me to treat the operating system as something I could shape, not just use.</p></div>
     </section>
 

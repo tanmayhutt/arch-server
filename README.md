@@ -179,7 +179,7 @@ Operational tools used on the node include:
 - KDE Connect for local device transfer
 - Small shell scripts for battery, network, media, and session checks
 
-The website uses a privacy-redacted version of the original desktop capture. It masks network names, local addresses, account identifiers, filesystem paths, and unsuitable terminal text while retaining the non-private system state from that session.
+The website uses the original full-resolution PNG capture of the Hyprland desktop session.
 
 ## Repository structure
 
@@ -188,7 +188,7 @@ arch-server/
 ├── .github/workflows/deploy.yml
 ├── assets/
 │   ├── fastfetch-sanitized.jpg
-│   └── hyprland-redacted.jpg
+│   └── hyprland.png
 ├── website/
 │   ├── public/
 │   ├── src/components/
