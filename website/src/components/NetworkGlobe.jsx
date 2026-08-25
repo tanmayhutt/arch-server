@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
-import { Pause, Play } from "lucide-react";
 import * as THREE from "three";
+import { particleStoryStages } from "@/data/particleStory";
 
 const COUNT = 2100;
-const STAGE_DURATION = 4000;
 const PALETTE = ["#315f73", "#477b68", "#a66a42", "#7e8b88"];
 
 // Official one-colour Arch mark from https://archlinux.org/art/.
@@ -160,23 +159,10 @@ const buildShape = (factory) => {
   return points;
 };
 
-const stages = [
-  ["01", "The display failed", "The panel stopped being useful, but the laptop itself was still healthy."],
-  ["02", "Arch survived", "The customized Arch system underneath the broken display was still mine."],
-  ["03", "It went headless", "I closed the lid on desktop life and kept the machine running without a screen."],
-  ["04", "Services moved in", "Docker isolates the workloads; Nginx serves this React site from the machine."],
-  ["05", "The public route", "Cloudflared makes an outbound tunnel, so Cloudflare can deliver the site without an open router port."],
-  ["06", "The private route", "Tailscale gives trusted devices a private mesh for SSH, Samba, and administration."],
-  ["07", "The deploy route", "A push lets GitHub Actions join as ephemeral CI, reach only SSH, and rebuild the Compose stack."],
-  ["08", "One connected node", "The old laptop is now a physical Arch server with separate public, private, and deployment paths."],
-];
-
-const NetworkGlobe = () => {
+const NetworkGlobe = ({ activeStage = 0 }) => {
   const mountRef = useRef(null);
   const activeRef = useRef(0);
-  const [active, setActive] = useState(0);
-  const [cycleKey, setCycleKey] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const active = Math.max(0, Math.min(particleStoryStages.length - 1, activeStage));
   const shouldReduceMotion = useReducedMotion();
   const shapes = useMemo(() => {
     const archPoint = createArchAsciiPointFactory();
@@ -193,25 +179,6 @@ const NetworkGlobe = () => {
   }, []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
-
-  useEffect(() => {
-    if (shouldReduceMotion || !isPlaying) return undefined;
-    const timer = window.setTimeout(() => {
-      setActive((current) => (current + 1) % stages.length);
-      setCycleKey((current) => current + 1);
-    }, STAGE_DURATION);
-    return () => window.clearTimeout(timer);
-  }, [active, cycleKey, isPlaying, shouldReduceMotion]);
-
-  const selectStage = (index) => {
-    setActive(index);
-    setCycleKey((current) => current + 1);
-  };
-
-  const togglePlayback = () => {
-    setIsPlaying((current) => !current);
-    setCycleKey((current) => current + 1);
-  };
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -368,7 +335,7 @@ const NetworkGlobe = () => {
         array[offset + 1] += velocities[offset + 1] * delta;
         array[offset + 2] += velocities[offset + 2] * delta;
       }
-      const connected = activeRef.current === stages.length - 1;
+      const connected = activeRef.current === particleStoryStages.length - 1;
       routeOpacity += ((connected ? 0.72 : 0) - routeOpacity) * 0.055 * delta;
       routeMaterials.forEach((routeMaterial, index) => { routeMaterial.opacity = index === routeMaterials.length - 1 ? routeOpacity : routeOpacity * 0.78; });
       const targetRotationY = pointer.active ? pointer.x * 0.022 : 0;
@@ -402,7 +369,7 @@ const NetworkGlobe = () => {
         <span className="scene-axis scene-axis-x" aria-hidden="true">X / TRANSFORMATION</span>
         <span className="scene-axis scene-axis-y" aria-hidden="true">Y / MACHINE STATE</span>
         <div ref={mountRef} className="machine-scene-canvas" aria-hidden="true" />
-        {active === stages.length - 1 && (
+        {active === particleStoryStages.length - 1 && (
           <div className="scene-route-labels" aria-hidden="true">
             <span className="scene-route scene-route-public">Cloudflare<small>public ingress</small></span>
             <span className="scene-route scene-route-private">Tailscale<small>private admin</small></span>
@@ -410,26 +377,6 @@ const NetworkGlobe = () => {
             <span className="scene-origin">Lenovo / Arch</span>
           </div>
         )}
-      </div>
-      <div className="scene-story-control">
-        <div className="scene-active-copy" aria-live="polite">
-          <span>{stages[active][0]} / 08</span>
-          <div><strong>{stages[active][1]}</strong><p>{stages[active][2]}</p></div>
-          {!shouldReduceMotion && (
-            <button type="button" className="scene-playback" onClick={togglePlayback} aria-label={isPlaying ? "Pause automatic story" : "Play automatic story"}>
-              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-              <span>{isPlaying ? "Pause" : "Play"}</span>
-            </button>
-          )}
-        </div>
-        <div className="scene-stage-picker" role="group" aria-label="Choose a chapter in the Arch server story">
-          {stages.map(([number, title], index) => (
-            <button key={title} type="button" className={active === index ? "active" : ""} onClick={() => selectStage(index)} aria-pressed={active === index}>
-              <span>{number}</span><strong>{title}</strong>
-              {active === index && isPlaying && !shouldReduceMotion && <span key={`${active}-${cycleKey}`} className="stage-progress" aria-hidden="true" />}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
