@@ -53,10 +53,22 @@ const Home = () => {
     <div className="site-page home-page home-redesign">
       <section className="story-prologue page-width" id="home">
         <div className="story-prologue-meta"><span>Lenovo IdeaPad / Arch Linux</span><span>Physical node / India</span></div>
-        <div className="story-prologue-copy">
-          <span className="section-index">A SECOND LIFE, TOLD BY 2,100 POINTS</span>
-          <h1>A broken screen became <em>a server.</em></h1>
-          <p>I loved this laptop as an Arch and Hyprland machine. When its display failed, the computer did not. Scroll to watch the same hardware change jobs.</p>
+        <div className="story-prologue-grid">
+          <div className="story-prologue-copy">
+            <span className="section-index">A SECOND LIFE, TOLD IN PARTICLES</span>
+            <h1>A broken screen became <em>a server.</em></h1>
+            <p>I loved this laptop as an Arch and Hyprland machine. When its display failed, the computer did not. Scroll to watch the same hardware change jobs.</p>
+          </div>
+          <aside className="prologue-dossier" aria-label="Current server role">
+            <span className="section-index">CURRENT ROLE</span>
+            <dl>
+              <div><dt>Origin</dt><dd>Lenovo IdeaPad</dd></div>
+              <div><dt>Public edge</dt><dd>Cloudflare Tunnel</dd></div>
+              <div><dt>Private mesh</dt><dd>Tailscale</dd></div>
+              <div><dt>Workload</dt><dd>Docker / Nginx</dd></div>
+              <div><dt>Router ports</dt><dd>None exposed</dd></div>
+            </dl>
+          </aside>
         </div>
         <a className="story-scroll-cue" href="#story"><span>Begin the transformation</span><ArrowDown size={16} /></a>
       </section>
@@ -70,7 +82,8 @@ const Home = () => {
             </div>
             <div className="particle-story-copy" aria-live="polite">
               <span className="particle-story-number">{number}</span>
-              <div><span className="particle-story-label">Chapter {number}</span><h2>{title}</h2><p>{description}</p></div>
+              <div className="particle-story-title"><span className="particle-story-label">Chapter {number}</span><h2>{title}</h2></div>
+              <p>{description}</p>
             </div>
             <div className="particle-story-navigation" role="group" aria-label="Jump to a story chapter">
               {particleStoryStages.map(([stageNumber, stageTitle], index) => (

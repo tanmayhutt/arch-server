@@ -62,7 +62,11 @@ const ServerStatus = ({ compact = false }) => {
     <section className={`section-block page-width status-section${compact ? " status-section-compact" : ""}`} aria-labelledby={compact ? "home-status-title" : "status-title"}>
       <div className="status-intro">
         <span className="section-index">A SMALL LIVE WINDOW</span>
-        <h2 id={compact ? "home-status-title" : "status-title"}>The laptop reports in, without publishing its private life.</h2>
+        {compact ? (
+          <h2 id="home-status-title">The laptop reports in, without publishing its private life.</h2>
+        ) : (
+          <h1 id="status-title">The laptop reports in, without publishing its private life.</h1>
+        )}
         <p>A tiny read-only service samples the host, rounds the useful numbers, and passes them through Nginx and the Cloudflare tunnel. This is real data from the server, not decorative telemetry.</p>
       </div>
       <div className="status-surface">

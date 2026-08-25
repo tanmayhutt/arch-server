@@ -1,21 +1,22 @@
-import { Code2, Server } from "lucide-react";
+import { Activity, ArrowUpRight, Code2, Network, Server } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 
 const navItems = [
-  ["/", "Home"],
-  ["/server", "Server"],
-  ["/architecture", "How it works"],
-  ["/status", "Live"],
-  ["/desktop", "Setup"],
-  ["/about", "About"],
+  ["/", "Overview", "The transformation"],
+  ["/server", "Server", "Physical node"],
+  ["/architecture", "Routes", "Trust and traffic"],
+  ["/status", "Live", "Coarse telemetry"],
+  ["/desktop", "Setup", "The retained desktop"],
+  ["/about", "About", "Why I built it"],
 ];
 
 const homeNavItems = [
-  ["home", "Home"],
-  ["story", "Story"],
-  ["how-it-works", "Routes"],
-  ["live", "Live"],
+  ["home", "Opening"],
+  ["story", "Particle story"],
+  ["how-it-works", "Traffic routes"],
+  ["live", "Live machine"],
 ];
 
 const pageMeta = {
@@ -42,7 +43,10 @@ const setMeta = (selector, attribute, value) => {
 
 const Layout = () => {
   const { pathname, hash } = useLocation();
+  const reducedMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState(hash.slice(1) || "home");
+  const [scrollProgress, setScrollProgress] = useState(0);
+
   useLayoutEffect(() => {
     const knownRoute = Boolean(pageMeta[pathname]);
     const [title, description] = pageMeta[pathname] || ["Page not found | arch-server", "This route does not exist on the arch-server project site."];
@@ -64,96 +68,120 @@ const Layout = () => {
     }
     canonical.setAttribute("href", canonicalUrl);
 
-    if (hash) {
-      window.requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView());
-    } else {
-      window.scrollTo(0, 0);
-    }
+    if (hash) window.requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView());
+    else window.scrollTo(0, 0);
   }, [pathname, hash]);
 
   useEffect(() => {
-    if (pathname !== "/") return undefined;
-
-    const sections = homeNavItems
-      .map(([id]) => document.getElementById(id))
-      .filter(Boolean);
-    if (!sections.length) return undefined;
-
     let frameId = 0;
-    const syncActiveSection = () => {
+    const sections = pathname === "/" ? homeNavItems.map(([id]) => document.getElementById(id)).filter(Boolean) : [];
+
+    const syncScroll = () => {
       frameId = 0;
-      const navBottom = document.querySelector(".site-nav")?.getBoundingClientRect().bottom || 0;
-      const activationLine = navBottom + 32;
+      const maximum = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(maximum > 0 ? Math.min(1, Math.max(0, window.scrollY / maximum)) : 0);
+      if (!sections.length) return;
+
+      const activationLine = Math.min(window.innerHeight * 0.38, 340);
       let current = sections[0];
       sections.forEach((section) => {
         if (section.getBoundingClientRect().top <= activationLine) current = section;
       });
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
-        current = sections[sections.length - 1];
-      }
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = sections[sections.length - 1];
       setActiveSection(current.id);
     };
-    const handleScroll = () => {
-      if (!frameId) frameId = window.requestAnimationFrame(syncActiveSection);
+
+    const scheduleSync = () => {
+      if (!frameId) frameId = window.requestAnimationFrame(syncScroll);
     };
 
-    syncActiveSection();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-    window.addEventListener("load", handleScroll);
-    const resizeObserver = new ResizeObserver(handleScroll);
+    syncScroll();
+    window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("resize", scheduleSync);
+    const resizeObserver = new ResizeObserver(scheduleSync);
     sections.forEach((section) => resizeObserver.observe(section));
+    resizeObserver.observe(document.body);
+
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-      window.removeEventListener("load", handleScroll);
+      window.removeEventListener("scroll", scheduleSync);
+      window.removeEventListener("resize", scheduleSync);
       resizeObserver.disconnect();
       if (frameId) window.cancelAnimationFrame(frameId);
     };
   }, [pathname]);
 
+  const jumpHome = (event, id) => {
+    if (pathname !== "/") return;
+    event.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth" });
+    window.history.replaceState(null, "", `#${id}`);
+  };
+
   return (
-    <div className="app-shell">
-    <a className="skip-link" href="#main-content">Skip to content</a>
-    <nav className="site-nav">
-      <div className="nav-inner page-width">
-        <Link to="/" className="brand-mark" aria-label="arch-server home">
+    <div className="app-shell field-shell">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+
+      <aside className="site-rail" aria-label="Project navigation">
+        <Link to="/" className="rail-brand" aria-label="arch-server home">
           <span className="brand-icon"><Server size={17} strokeWidth={1.7} /></span>
-          <span className="brand-name">arch-server</span>
-          <small>HOME NODE</small>
+          <span><strong>arch-server</strong><small>HOME NODE / 01</small></span>
         </Link>
-        <div className="nav-links">
-          {pathname === "/" ? (
-            <>
-              {homeNavItems.map(([id, label]) => (
-                <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "location" : undefined}>
-                  {label}
-                </a>
-              ))}
-              <NavLink to="/desktop">Setup</NavLink>
-              <NavLink to="/about">About</NavLink>
-            </>
-          ) : navItems.map(([to, label]) => (
+
+        <nav className="rail-primary" aria-label="Main pages">
+          <span className="rail-kicker">Project index</span>
+          {navItems.map(([to, label, detail], index) => (
             <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>
-              {label}
+              <span className="rail-index">0{index + 1}</span>
+              <span><strong>{label}</strong><small>{detail}</small></span>
             </NavLink>
           ))}
+        </nav>
+
+        {pathname === "/" && (
+          <nav className="rail-sections" aria-label="Overview sections">
+            <span className="rail-kicker">On this page</span>
+            {homeNavItems.map(([id, label]) => (
+              <a key={id} href={`#${id}`} onClick={(event) => jumpHome(event, id)} className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "location" : undefined}>
+                <span aria-hidden="true" />{label}
+              </a>
+            ))}
+          </nav>
+        )}
+
+        <div className="rail-footer">
+          <Link to="/status" className="rail-live"><Activity size={14} /><span><strong>Public snapshot</strong><small>Privacy-coarsened</small></span></Link>
+          <a href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noreferrer"><Code2 size={14} /> Source <ArrowUpRight size={12} /></a>
+          <p><Network size={13} /> India / Physical origin</p>
         </div>
-        <a className="nav-source" href="https://github.com/tanmayhutt/arch-server" target="_blank" rel="noreferrer">
-          <Code2 size={16} /> <span>Source</span>
-        </a>
-      </div>
-    </nav>
+      </aside>
 
-    <main id="main-content"><Outlet /></main>
+      <header className="mobile-dock">
+        <Link to="/" className="mobile-brand"><Server size={16} /><strong>arch-server</strong></Link>
+        <nav aria-label="Mobile navigation">
+          {pathname === "/" ? homeNavItems.map(([id, label]) => (
+            <a key={id} href={`#${id}`} onClick={(event) => jumpHome(event, id)} className={activeSection === id ? "active" : ""}>{label}</a>
+          )) : navItems.map(([to, label]) => (
+            <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{label}</NavLink>
+          ))}
+        </nav>
+      </header>
 
-    <footer className="site-footer">
-      <div className="page-width footer-inner">
-        <div>PHYSICAL ORIGIN / SELF-HOSTED</div>
-        <p>Arch Linux · Docker · Cloudflare · Tailscale</p>
-        <p>Built and operated by Tanmay.</p>
+      <div className="shell-content">
+        <div className="page-progress" aria-hidden="true"><span style={{ transform: `scaleX(${scrollProgress})` }} /></div>
+        <main id="main-content">
+          <motion.div key={pathname} initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}>
+            <Outlet />
+          </motion.div>
+        </main>
+
+        <footer className="site-footer">
+          <div className="page-width footer-inner">
+            <div>PHYSICAL ORIGIN / SELF-HOSTED</div>
+            <p>Arch Linux · Docker · Cloudflare · Tailscale</p>
+            <p>Built and operated by Tanmay.</p>
+          </div>
+        </footer>
       </div>
-    </footer>
     </div>
   );
 };
