@@ -27,7 +27,7 @@ The machine now provides four practical surfaces:
 - Remote administration through OpenSSH over Tailscale
 - Identity-gated remote shell access through Cloudflare Access, including browser rendering
 
-The retained Hyprland desktop remains available for local maintenance and recovery. It is not part of the public serving path.
+The retained Hyprland desktop is automated via DRM connector checks in .zprofile: it stays dormant to save ~500 MB RAM during headless operation, automatically spins up when HDMI is plugged in, and terminates when disconnected. It is not part of the public serving path.
 
 ## Architecture
 

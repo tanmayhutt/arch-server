@@ -27,6 +27,7 @@ const machineNotes = [
   ["Host services", "OpenSSH, Tailscale, Samba, NetworkManager, and systemd"],
   ["Compose workload", "One Nginx container for this site and one cloudflared container for public ingress"],
   ["Router exposure", "No forwarded ports. The public connection begins outbound from the laptop"],
+  ["Display behavior", "Zero graphical overhead when headless; hotplugs Hyprland onto HDMI on demand"],
   ["Failure recovery", "Closed-lid operation plus systemd and restart: unless-stopped for the declared services"],
 ];
 

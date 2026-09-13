@@ -29,7 +29,7 @@ const Dotfiles = () => (
       <div className="page-header-grid">
         <h1>A desktop when the node needs one.</h1>
         <div className="header-side">
-          <p>The server operates headlessly, but I kept its original Hyprland environment as a local maintenance, recovery, and configuration surface.</p>
+          <p>The server operates headlessly by default to save memory, but dynamically auto-launches Hyprland (mirroring eDP-1) the moment an HDMI display is connected, and auto-exits on disconnect.</p>
           <a href="https://github.com/tanmayhutt/hyprland-dotfiles" target="_blank" rel="noreferrer" className="text-link">
             <Code2 size={15} /> Inspect dotfiles <ArrowUpRight size={14} />
           </a>
