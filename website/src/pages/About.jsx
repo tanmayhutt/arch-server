@@ -18,7 +18,7 @@ const chapters = [
     icon: Wrench,
     number: "03",
     title: "So I removed the screen from the equation.",
-    body: "I configured closed-lid operation, moved administration to SSH, connected my devices through Tailscale, and made the machine useful without a local display. Samba gave it a practical storage job. Systemd and Docker made its services restartable and easier to reason about.",
+    body: "I configured closed-lid operation, moved administration to SSH, and connected my devices through Tailscale. The node stays headless by default to eliminate graphical overhead, automatically spinning up Hyprland only when an HDMI display is connected and exiting on disconnect. Samba, Docker, and systemd gave it quiet, reliable infrastructure jobs.",
   },
   {
     icon: Server,
