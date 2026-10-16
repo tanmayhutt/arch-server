@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
     "start": "node src/server.mjs",
-    "check": "node --check src/server.mjs && node --check src/auth.mjs && node --check src/docker.mjs && node --check src/inventory.mjs"
+    "check": "for f in src/*.mjs; do node --check $f || exit 1; done"
   },
   "dependencies": {
     "jose": "6.2.12"

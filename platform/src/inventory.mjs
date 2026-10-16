@@ -1,3 +1,4 @@
+import { engineReady } from "./config.mjs";
 import { docker } from "./docker.mjs";
 
 const CACHE_MS = 8000;
@@ -108,7 +109,7 @@ const collect = async () => {
     return {
       id: summary.Id.slice(0, 12),
       name,
-      project: labels["com.docker.compose.project"] || null,
+      project: labels["com.docker.compose.project"] || (labels["arch.platform.managed"] === "true" ? "deployed-apps" : null),
       service: labels["com.docker.compose.service"] || name,
       workingDir: labels["com.docker.compose.project.working_dir"]?.replace(/^\/home\/[^/]+/, "~") || null,
       image: summary.Image,
@@ -140,7 +141,7 @@ const collect = async () => {
   return {
     status: "ok",
     collectedAt: new Date().toISOString(),
-    capabilities: { deploy: false, dockerAccess: "read-only" },
+    capabilities: { deploy: engineReady(), dockerAccess: engineReady() ? "managed-write" : "read-only" },
     host: {
       name: info.Name,
       os: info.OperatingSystem,

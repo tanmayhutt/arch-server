@@ -131,3 +131,98 @@
   .console-route-arrow { display: none; }
   .console-panel-heading { flex-wrap: wrap; }
 }
+
+/* Deploy engine */
+.console-panel-heading > .console-button { flex: 0 0 auto; }
+.console-button, .console-icon-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 11px; color: var(--text); border: 1px solid var(--line-strong); border-radius: 5px;
+  background: rgba(255,255,255,0.55); font-size: 12.5px; font-weight: 550; cursor: pointer; white-space: nowrap;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+.console-icon-button { width: 32px; height: 32px; padding: 0; color: var(--muted); }
+.console-button:hover:not(:disabled), .console-icon-button:hover { border-color: rgba(47,112,139,0.45); color: var(--text); }
+.console-button:focus-visible, .console-icon-button:focus-visible, .console-link-button:focus-visible, .console-link:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.console-button:disabled { cursor: not-allowed; opacity: 0.55; }
+.console-button.is-primary { color: #fff; border-color: var(--ice-strong); background: var(--ice-strong); }
+.console-button.is-primary:hover:not(:disabled) { color: #fff; background: #1d4d61; }
+.console-button.is-danger { color: #fff; border-color: #a24b43; background: #a24b43; }
+.console-icon-button.is-danger:hover { color: #a24b43; border-color: rgba(162,75,67,0.45); }
+.console-button.is-small { padding: 4px 8px; font-size: 11.5px; }
+.console-link { display: inline-flex; align-items: center; gap: 4px; color: var(--ice-strong); font-size: 13px; font-weight: 550; }
+.console-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.console-link-button { padding: 0; color: var(--ice-strong); border: 0; background: none; font: 500 12px/1.4 "JetBrains Mono", monospace; cursor: pointer; }
+.console-link-button:hover { text-decoration: underline; }
+.console-muted { color: var(--subtle); font-size: 12px; }
+
+.console-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); font: 600 10.5px/1.3 "JetBrains Mono", monospace; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.console-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.console-status.is-live { color: var(--green); border-color: rgba(79,120,98,0.4); background: rgba(79,120,98,0.07); }
+.console-status.is-queued, .console-status.is-building, .console-status.is-deploying { color: var(--ice-strong); border-color: rgba(47,112,139,0.38); background: rgba(47,112,139,0.06); }
+.console-status.is-failed { color: #a24b43; border-color: rgba(162,75,67,0.4); background: rgba(162,75,67,0.06); }
+.console-status.is-stopped, .console-status.is-cancelled, .console-status.is-superseded { color: var(--subtle); }
+@media (prefers-reduced-motion: no-preference) {
+  .console-status.is-building::before, .console-status.is-deploying::before, .console-status.is-queued::before { animation: console-pulse 1.4s ease-in-out infinite; }
+}
+@keyframes console-pulse { 50% { opacity: 0.3; } }
+
+.console-projects, .console-history, .console-steps, .console-env-keys { margin: 0; padding: 0; list-style: none; }
+.console-project { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.console-project:last-child { border-bottom: 0; }
+.console-project-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.console-project-title h3 { margin: 0; color: var(--text); font-size: 16px; font-weight: 620; letter-spacing: -0.01em; }
+.console-project-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 7px 0 0; color: var(--muted); font-size: 12.5px; }
+.console-project-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.console-project-meta code, .console-history code, .console-deploy-head code { color: var(--muted); font: 500 11.5px/1.4 "JetBrains Mono", monospace; }
+.console-project-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.console-history { grid-column: 1 / -1; border-top: 1px dashed var(--line-strong); }
+.console-history li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.console-history li:last-child { border-bottom: 0; }
+.console-history .console-button { margin-left: auto; }
+.console-empty-state { padding: 18px 0 14px; }
+.console-empty-state p { max-width: 640px; margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+.console-sheet { width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 48px); padding: 0; color: var(--text); border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); box-shadow: 0 24px 60px rgba(20, 30, 30, 0.22); }
+.console-sheet.is-wide { width: min(900px, calc(100vw - 24px)); }
+.console-sheet::backdrop { background: rgba(24, 32, 32, 0.38); backdrop-filter: blur(2px); }
+.console-sheet-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.console-sheet-head h2 { margin: 0; font-size: 16px; font-weight: 620; }
+.console-sheet-body { padding: 18px 20px 20px; }
+.console-sheet-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+.console-form { display: grid; gap: 14px; }
+.console-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.console-form-row.is-three { grid-template-columns: repeat(3, 1fr); }
+.console-field { display: grid; align-content: start; gap: 6px; min-width: 0; }
+.console-field > span { color: var(--text); font-size: 12.5px; font-weight: 600; }
+.console-field small { color: var(--subtle); font-size: 12px; line-height: 1.45; }
+.console-field input, .console-field textarea { width: 100%; padding: 8px 10px; color: var(--text); border: 1px solid var(--line-strong); border-radius: 5px; background: #fff; font: 500 13px/1.45 "JetBrains Mono", monospace; }
+.console-field textarea { resize: vertical; }
+.console-field input:focus-visible, .console-field textarea:focus-visible { outline: 2px solid rgba(47,112,139,0.5); outline-offset: 1px; border-color: var(--ice); }
+.console-form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.console-form-error { margin: 0; padding: 9px 11px; color: #8c3d36; border: 1px solid rgba(162,75,67,0.3); border-radius: 5px; background: rgba(162,75,67,0.06); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.console-panel > .console-form-error { margin: 12px 0; }
+.console-form-note { margin: 0; color: var(--green); font-size: 13px; }
+.console-env-keys li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.console-env-keys code { font: 500 12px/1.4 "JetBrains Mono", monospace; }
+.console-env-keys li.is-removed code { color: var(--subtle); text-decoration: line-through; }
+
+.console-deploy-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.console-deploy-head .console-button { margin-left: auto; }
+.console-steps { display: grid; gap: 4px; margin-bottom: 14px; }
+.console-steps li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 10px; padding: 5px 0; color: var(--text); font-size: 13px; }
+.console-steps li span { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+.console-steps li small { color: var(--subtle); font: 500 11px/1 "JetBrains Mono", monospace; }
+.console-steps li.is-success span { background: var(--green); }
+.console-steps li.is-in_progress span { background: var(--ice); }
+.console-steps li.is-failure span, .console-steps li.is-cancelled span { background: #a24b43; }
+.console-steps li.is-skipped { color: var(--subtle); }
+.console-log { max-height: 46vh; min-height: 180px; margin: 0; padding: 14px; overflow: auto; color: #dfe7e3; border-radius: 6px; background: #18201f; font: 500 12px/1.55 "JetBrains Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.console-log:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .console-project { grid-template-columns: 1fr; }
+  .console-project-actions { justify-content: flex-start; }
+  .console-form-row, .console-form-row.is-three { grid-template-columns: 1fr; }
+  .console-panel-heading > .console-button { order: 3; }
+}

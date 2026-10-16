@@ -7,10 +7,10 @@ A personal, single-owner deployment platform for the arch-server: push a reposit
 | Phase | Scope | State |
 |---|---|---|
 | 1. Inventory | Read-only console: every Compose project and container, resource usage, health, restarts, reachability, tunnel routes | Built |
-| 2. Engine | Caddy app router, `*.tanmaytiwari.me` wildcard, deploy an image to a subdomain, env vars, health-gated swap, rollback, logs | Planned |
-| 3. GitHub | GitHub App, push-to-deploy, shared builder workflow, GHCR images | Planned |
+| 2. Engine | One-click deploy from the console: GitHub Actions builds, Caddy app router, `*.tanmaytiwari.me`, encrypted env vars, health-gated swap, rollback, stop/start, runtime logs | Built |
+| 3. Automation | Push-to-deploy webhooks, branch previews, build-time variables | Planned |
 | 4. Data | Postgres, Redis, Mongo, volumes, nightly backups, workers, cron | Planned |
-| 5. Polish | Branch previews, custom domains, metrics history, failure alerts | Planned |
+| 5. Polish | Custom domains, metrics history, failure alerts | Planned |
 
 ## Architecture
 
@@ -27,12 +27,23 @@ Browser ──> Cloudflare Access (owner + MFA) ──> tunnel ──> arch-serv
 - **The public site cannot be taken down by the console.** Nginx resolves the platform upstream per request, so a stopped platform container yields a console error, not a failed site.
 - **Tunnel routes** are read from the `cloudflared` connector's own configuration log, cached for five minutes. Host-service origins are reduced to `host:<port>`.
 
-## Planned build path (phases 2-3)
+## How a deploy works
 
-1. A push reaches the platform webhook (`/api/platform/hooks/github`, Access bypass, HMAC-verified).
-2. The platform dispatches one shared GitHub Actions builder workflow. It checks out the repository, builds with its Dockerfile or Railpack, and pushes to GHCR. Builds never run on the i3.
-3. The platform pulls the image, starts it on the `apps` network with memory and CPU limits, waits for its health check, switches the Caddy route, then stops the previous container. The previous image is retained for rollback.
-4. `*.tanmaytiwari.me` points at the tunnel, and the tunnel sends it to Caddy. Preview hostnames stay one level deep (`app-git-branch.tanmaytiwari.me`) so Cloudflare's universal certificate covers them.
+1. The console calls `POST /api/platform/projects/:id/deploy`. Same-origin JSON is required for every write, on top of the Access token.
+2. The platform dispatches `.github/workflows/build-app.yml` with a validated repository, ref, root directory, and image tag. The workflow builds with the repository Dockerfile, or with Railpack (pinned `v0.40.1`) when there is none, using the GitHub Actions cache.
+3. The workflow joins the tailnet as `tag:ci` and streams `docker save | gzip` over SSH into `docker load` on the server. No registry or pull token is involved.
+4. The platform starts `app-<slug>-<id>` on the `arch-apps` network with memory, CPU, and PID limits, `no-new-privileges`, and rotated logs. It waits up to 90 seconds for any HTTP response below 500 on the project port.
+5. Only then is the Caddy route switched and the previous container removed. A failed deploy never touches the live version. The last three good images are kept for rollback.
+
+`*.tanmaytiwari.me` reaches Caddy through a wildcard tunnel route. Specific tunnel hostnames such as `arch-server` and `ssh` take precedence. Preview hostnames must stay one level deep for Cloudflare's universal certificate.
+
+## Security boundaries
+
+- The Docker proxy now allows POST so the engine can create containers. The platform only stops or removes containers labelled `arch.platform.managed=true`, and builds every container spec server-side: no privileged mode, host networking, binds, or devices. Exec, secrets, swarm, and plugins remain blocked.
+- Caddy's admin API has no authentication, so it binds only to `10.217.83.2` on the internal `router-admin` network. Apps cannot reach it.
+- Apps run on `10.217.84.0/24` with outbound internet. A host firewall rule blocking that subnet from host-only services (Samba, SSH, tailnet-bound tools) is a recommended follow-up.
+- Environment variables are AES-256-GCM encrypted in SQLite with `PLATFORM_SECRET_KEY` and are never returned to the browser.
+- Apps reserve at most `APPS_MEMORY_BUDGET_MB` (3072 by default) in total.
 
 ## One-time setup for the console
 
@@ -41,7 +52,12 @@ Browser ──> Cloudflare Access (owner + MFA) ──> tunnel ──> arch-serv
    - Policy: allow only the owner email, require MFA, short session.
 2. Copy the application's AUD tag and the team domain (`<team>.cloudflareaccess.com`).
 3. GitHub repository, Settings, Secrets and variables, Actions, Variables: set `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and `PLATFORM_OWNER_EMAIL`.
-4. Push. The deploy workflow writes them to the server's private `.env`.
+4. Secrets for the engine:
+   - `PLATFORM_SECRET_KEY`: random, for example `openssl rand -hex 32`.
+   - `PLATFORM_GITHUB_TOKEN`: fine-grained token, only this repository, Actions read and write.
+   - `BUILDER_REPO_TOKEN` (optional): fine-grained token, Contents read-only, for private source repositories.
+5. Cloudflare tunnel public hostname `*.tanmaytiwari.me` to `http://arch-server-router:8080`.
+6. Run the deploy workflow. It writes the values to the server's private `.env`.
 
 ## Local development
 

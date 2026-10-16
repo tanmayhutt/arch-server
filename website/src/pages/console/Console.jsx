@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Boxes, Cpu, Globe2, HardDrive, LockKeyhole, MemoryStick, Network, RefreshCw, Rocket, Server, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Boxes, Cpu, Globe2, HardDrive, LockKeyhole, MemoryStick, Network, RefreshCw, Server, ShieldCheck } from "lucide-react";
+import Projects from "./Projects";
 import "./console.css";
 
 const REFRESH_MS = 15000;
@@ -197,11 +198,13 @@ const Console = () => {
         {data && (
           <>
             <section className="console-overview" aria-label="Overview">
-              <div><Boxes size={15} /><span>Projects</span><strong>{data.projects.length}</strong><small>{services.length} containers</small></div>
+              <div><Boxes size={15} /><span>Stacks</span><strong>{data.projects.length}</strong><small>{services.length} containers</small></div>
               <div><Cpu size={15} /><span>Running</span><strong>{data.host.containers.running}<small> / {data.host.containers.total}</small></strong><small>{data.host.containers.stopped} stopped</small></div>
               <div><MemoryStick size={15} /><span>Container memory</span><strong>{formatBytes(usedMemory)}</strong><small>{formatBytes(committedMemory)} reserved by limits{unlimited ? `, ${unlimited} unlimited` : ""}</small></div>
               <div><HardDrive size={15} /><span>Images</span><strong>{data.host.images.count}</strong><small>{formatBytes(data.host.images.sizeBytes)} on disk</small></div>
             </section>
+
+            <Projects />
 
             <section className="console-panel" aria-labelledby="routes-title">
               <div className="console-panel-heading">
@@ -240,13 +243,6 @@ const Console = () => {
               </section>
             ))}
 
-            <section className="console-panel console-engine" aria-labelledby="engine-title">
-              <Rocket size={16} />
-              <div>
-                <h2 id="engine-title">Deploy engine</h2>
-                <p>Not enabled yet. This phase has read-only Docker access, so the console can observe the server but cannot start, stop, or deploy anything.</p>
-              </div>
-            </section>
           </>
         )}
       </main>
