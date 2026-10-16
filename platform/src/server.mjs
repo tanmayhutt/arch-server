@@ -27,12 +27,14 @@ createServer(async (request, response) => {
   // Container health check. Nginx only forwards /api/platform/, so this is not public.
   if (path === "/healthz") return send(response, 200, { status: "ok", authMode });
 
+  // Authenticate before routing so unknown or oddly encoded paths that slip past
+  // Cloudflare's path matching still require a valid owner token.
+  const auth = await authenticate(request);
+  if (!auth.ok) return send(response, auth.status, { status: auth.code });
+
   const handler = routes[path];
   if (!handler) return send(response, 404, { status: "not_found" });
   if (request.method !== "GET") return send(response, 405, { status: "method_not_allowed" });
-
-  const auth = await authenticate(request);
-  if (!auth.ok) return send(response, auth.status, { status: auth.code });
 
   try {
     send(response, 200, await handler(auth));
