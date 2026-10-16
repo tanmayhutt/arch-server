@@ -226,3 +226,10 @@
   .console-form-row, .console-form-row.is-three { grid-template-columns: 1fr; }
   .console-panel-heading > .console-button { order: 3; }
 }
+
+.console-toggle { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.console-toggle input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--ice-strong); }
+.console-toggle span { display: grid; gap: 3px; }
+.console-toggle strong { color: var(--text); font-size: 12.5px; font-weight: 600; }
+.console-toggle small { color: var(--subtle); font-size: 12px; line-height: 1.45; }
+.console-toggle input:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }

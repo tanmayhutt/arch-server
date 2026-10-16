@@ -67,5 +67,6 @@ jobs:
               "CF_ACCESS_AUD=${{ vars.CF_ACCESS_AUD }}" \
               "PLATFORM_OWNER_EMAIL=${{ vars.PLATFORM_OWNER_EMAIL }}" \
               "PLATFORM_SECRET_KEY=${{ secrets.PLATFORM_SECRET_KEY }}" \
-              "PLATFORM_GITHUB_TOKEN=${{ secrets.PLATFORM_GITHUB_TOKEN }}" > .env
+              "PLATFORM_GITHUB_TOKEN=${{ secrets.PLATFORM_GITHUB_TOKEN }}" \
+              "PLATFORM_BUILD_KEY=${{ secrets.PLATFORM_BUILD_KEY }}" > .env
             docker compose up -d --build --remove-orphans

@@ -50,9 +50,39 @@ const Field = ({ label, hint, children }) => (
 
 const FormError = ({ message }) => message ? <p className="console-form-error" role="alert">{message}</p> : null;
 
+const Toggle = ({ label, hint, checked, onChange }) => (
+  <label className="console-toggle">
+    <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    <span><strong>{label}</strong>{hint && <small>{hint}</small>}</span>
+  </label>
+);
+
+// Stored variable names with remove toggles. Values are never sent back to the browser.
+const KeyList = ({ label, keys, removed, onToggle }) => (
+  <div className="console-field">
+    <span>{label}</span>
+    {keys.length ? (
+      <ul className="console-env-keys">
+        {keys.map((key) => (
+          <li key={key} className={removed.has(key) ? "is-removed" : ""}>
+            <code>{key}</code>
+            <button type="button" className="console-link-button" onClick={() => onToggle(key)}>{removed.has(key) ? "Keep" : "Remove"}</button>
+          </li>
+        ))}
+      </ul>
+    ) : <small>None yet.</small>}
+  </div>
+);
+
+const toggleIn = (setter) => (key) => setter((current) => {
+  const next = new Set(current);
+  if (next.has(key)) next.delete(key); else next.add(key);
+  return next;
+});
+
 const NewProject = ({ appDomain, onCreated, onClose }) => {
   const [repos, setRepos] = useState([]);
-  const [form, setForm] = useState({ repo: "", branch: "main", slug: "", port: "3000", memoryMb: "256", rootDir: "", env: "" });
+  const [form, setForm] = useState({ repo: "", branch: "main", slug: "", port: "3000", memoryMb: "256", rootDir: "", env: "", buildEnv: "", autoDeploy: true });
   const [state, setState] = useState({ busy: false, error: "" });
   const slugTouched = useRef(false);
 
@@ -74,7 +104,7 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
     try {
       const data = await api("/projects", {
         method: "POST",
-        body: { repo: form.repo.trim(), branch: form.branch.trim(), slug: form.slug.trim(), port: Number(form.port), memoryMb: Number(form.memoryMb), rootDir: form.rootDir.trim(), env: parseEnv(form.env) },
+        body: { repo: form.repo.trim(), branch: form.branch.trim(), slug: form.slug.trim(), port: Number(form.port), memoryMb: Number(form.memoryMb), rootDir: form.rootDir.trim(), env: parseEnv(form.env), buildEnv: parseEnv(form.buildEnv), autoDeploy: form.autoDeploy },
       });
       onCreated(data.deploymentId);
     } catch (error) {
@@ -100,9 +130,13 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
           <Field label="Port" hint="The app must listen on this port. PORT is set for you."><input required type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} /></Field>
           <Field label="Memory (MiB)" hint="Hard limit. 256 suits most small apps."><input required type="number" min="64" max="2048" step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
         </div>
-        <Field label="Environment variables" hint="One KEY=VALUE per line. Stored encrypted and never shown again.">
-          <textarea rows={4} value={form.env} onChange={(event) => update("env", event.target.value)} placeholder={"DATABASE_URL=...\nAPI_KEY=..."} spellCheck="false" />
+        <Field label="Runtime variables" hint="Available while the app runs. One KEY=VALUE per line. Stored encrypted and never shown again.">
+          <textarea rows={3} value={form.env} onChange={(event) => update("env", event.target.value)} placeholder={"DATABASE_URL=...\nAPI_KEY=..."} spellCheck="false" />
         </Field>
+        <Field label="Build variables" hint="Available only while building, for values like VITE_API_URL or NEXT_PUBLIC_*. Anything a frontend reads at build time ends up in its public files.">
+          <textarea rows={2} value={form.buildEnv} onChange={(event) => update("buildEnv", event.target.value)} placeholder="VITE_API_URL=https://api.example.com" spellCheck="false" />
+        </Field>
+        <Toggle label="Deploy on push" hint="Checks the branch every 45 seconds and deploys new commits." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />
         <FormError message={state.error} />
         <div className="console-form-actions">
           <button type="button" className="console-button" onClick={onClose}>Cancel</button>
@@ -114,8 +148,9 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
 };
 
 const ProjectSettings = ({ project, onSaved, onClose }) => {
-  const [form, setForm] = useState({ branch: project.branch, rootDir: project.rootDir, port: String(project.port), memoryMb: String(project.memoryMb), cpus: String(project.cpus), env: "" });
+  const [form, setForm] = useState({ branch: project.branch, rootDir: project.rootDir, port: String(project.port), memoryMb: String(project.memoryMb), cpus: String(project.cpus), env: "", buildEnv: "", autoDeploy: project.autoDeploy });
   const [removed, setRemoved] = useState(new Set());
+  const [removedBuild, setRemovedBuild] = useState(new Set());
   const [state, setState] = useState({ busy: false, error: "", saved: false });
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -125,13 +160,16 @@ const ProjectSettings = ({ project, onSaved, onClose }) => {
     try {
       const env = parseEnv(form.env);
       for (const key of removed) env[key] = null;
+      const buildEnv = parseEnv(form.buildEnv);
+      for (const key of removedBuild) buildEnv[key] = null;
       await api(`/projects/${project.id}`, {
         method: "PATCH",
-        body: { branch: form.branch, rootDir: form.rootDir, port: Number(form.port), memoryMb: Number(form.memoryMb), cpus: Number(form.cpus), env },
+        body: { branch: form.branch, rootDir: form.rootDir, port: Number(form.port), memoryMb: Number(form.memoryMb), cpus: Number(form.cpus), env, buildEnv, autoDeploy: form.autoDeploy },
       });
       setState({ busy: false, error: "", saved: true });
-      setForm((current) => ({ ...current, env: "" }));
+      setForm((current) => ({ ...current, env: "", buildEnv: "" }));
       setRemoved(new Set());
+      setRemovedBuild(new Set());
       onSaved();
     } catch (error) {
       setState({ busy: false, error: error.message, saved: false });
@@ -150,23 +188,14 @@ const ProjectSettings = ({ project, onSaved, onClose }) => {
           <Field label="Memory (MiB)"><input type="number" min="64" max="2048" step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
           <Field label="CPU"><input type="number" min="0.1" max="2" step="0.1" value={form.cpus} onChange={(event) => update("cpus", event.target.value)} /></Field>
         </div>
-        <div className="console-field">
-          <span>Stored variables</span>
-          {project.envKeys.length ? (
-            <ul className="console-env-keys">
-              {project.envKeys.map((key) => (
-                <li key={key} className={removed.has(key) ? "is-removed" : ""}>
-                  <code>{key}</code>
-                  <button type="button" className="console-link-button" onClick={() => setRemoved((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; })}>
-                    {removed.has(key) ? "Keep" : "Remove"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : <small>None yet.</small>}
-        </div>
-        <Field label="Add or replace variables" hint="KEY=VALUE per line. A key that already exists is overwritten.">
-          <textarea rows={3} value={form.env} onChange={(event) => update("env", event.target.value)} spellCheck="false" />
+        <Toggle label="Deploy on push" hint="Checks the branch every 45 seconds and deploys new commits." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />
+        <KeyList label="Runtime variables" keys={project.envKeys} removed={removed} onToggle={toggleIn(setRemoved)} />
+        <Field label="Add or replace runtime variables" hint="KEY=VALUE per line. A key that already exists is overwritten.">
+          <textarea rows={2} value={form.env} onChange={(event) => update("env", event.target.value)} spellCheck="false" />
+        </Field>
+        <KeyList label="Build variables" keys={project.buildEnvKeys} removed={removedBuild} onToggle={toggleIn(setRemovedBuild)} />
+        <Field label="Add or replace build variables" hint="Used only during the build. Values a frontend reads at build time become public.">
+          <textarea rows={2} value={form.buildEnv} onChange={(event) => update("buildEnv", event.target.value)} spellCheck="false" />
         </Field>
         <FormError message={state.error} />
         {state.saved && <p className="console-form-note" role="status">Saved. Redeploy for the changes to take effect.</p>}
@@ -314,6 +343,7 @@ const ProjectCard = ({ project, open, run }) => {
           {live?.commit && <code>{live.commit.slice(0, 7)}</code>}
           {project.deployments[0] && <span>{formatAgo(project.deployments[0].createdAt)}</span>}
           <span>{project.memoryMb} MiB · {project.cpus} CPU · port {project.port}</span>
+          <span>{project.autoDeploy ? "Deploys on push" : "Manual deploys"}</span>
         </p>
       </div>
       <div className="console-project-actions">

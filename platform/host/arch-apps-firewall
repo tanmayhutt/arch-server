@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Confines deployed app containers (arch-apps, 10.217.84.0/24) to the public internet and
+# their own network. They cannot reach host services (SSH, Samba, tailnet-bound tools),
+# the LAN, the tailnet, other Docker networks, or link-local metadata addresses.
+# Idempotent: safe to run on every boot and every Docker restart.
+set -euo pipefail
+
+SUBNET="10.217.84.0/24"
+BLOCKED=(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16 127.0.0.0/8 224.0.0.0/4 240.0.0.0/4 0.0.0.0/8)
+
+chain() {
+  iptables -N "$1" 2>/dev/null || iptables -F "$1"
+}
+
+# Traffic addressed to the host itself (any of its interfaces) arrives on INPUT.
+chain ARCH-APPS-IN
+iptables -A ARCH-APPS-IN -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+iptables -A ARCH-APPS-IN -j DROP
+iptables -C INPUT -s "$SUBNET" -j ARCH-APPS-IN 2>/dev/null || iptables -I INPUT 1 -s "$SUBNET" -j ARCH-APPS-IN
+
+# Forwarded traffic: allow replies and the apps network itself, drop every private range.
+chain ARCH-APPS-FWD
+iptables -A ARCH-APPS-FWD -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+iptables -A ARCH-APPS-FWD -d "$SUBNET" -j RETURN
+for range in "${BLOCKED[@]}"; do
+  iptables -A ARCH-APPS-FWD -d "$range" -j DROP
+done
+iptables -A ARCH-APPS-FWD -j RETURN
+
+# Docker creates DOCKER-USER and evaluates it before its own forwarding rules.
+iptables -N DOCKER-USER 2>/dev/null || true
+iptables -C DOCKER-USER -s "$SUBNET" -j ARCH-APPS-FWD 2>/dev/null || iptables -I DOCKER-USER 1 -s "$SUBNET" -j ARCH-APPS-FWD
+
+echo "arch-apps firewall applied to $SUBNET"

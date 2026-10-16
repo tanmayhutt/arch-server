@@ -1,0 +1,12 @@
+[Unit]
+Description=Confine deployed app containers to the public internet
+After=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/arch-apps-firewall
+
+[Install]
+WantedBy=docker.service multi-user.target

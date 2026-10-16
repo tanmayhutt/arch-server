@@ -23,12 +23,12 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Starts the shared builder workflow. Newer API versions return the run id directly;
 // otherwise the run is found by its unique run-name.
-export const dispatchBuild = async ({ deploymentId, repo, ref, rootDir, image }) => {
+export const dispatchBuild = async ({ deploymentId, repo, ref, rootDir, image, buildEnv = "" }) => {
   const result = await api(`${builder()}/actions/workflows/${config.github.builderWorkflow}/dispatches`, {
     method: "POST",
     body: {
       ref: config.github.builderRef,
-      inputs: { deployment_id: deploymentId, repository: repo, ref, root_dir: rootDir, image },
+      inputs: { deployment_id: deploymentId, repository: repo, ref, root_dir: rootDir, image, build_env: buildEnv },
       return_run_details: true,
     },
   });
@@ -64,4 +64,26 @@ export const publicRepos = async () => {
   }));
   repoCache = { at: Date.now(), data };
   return data;
+};
+
+// Resolves a branch to its head commit. Conditional requests with an ETag return 304 when
+// nothing changed, which does not count against the API rate limit.
+const heads = new Map();
+export const headCommit = async (repo, branch) => {
+  const key = `${repo}@${branch}`;
+  const cached = heads.get(key);
+  const headers = {
+    Accept: "application/vnd.github.sha",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "arch-server-platform",
+    Authorization: `Bearer ${config.github.token}`,
+  };
+  if (cached?.etag) headers["If-None-Match"] = cached.etag;
+  const response = await fetch(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}`, { headers, signal: AbortSignal.timeout(15000) });
+  if (response.status === 304 && cached) return cached.sha;
+  if (!response.ok) throw new Error(`GitHub ${response.status} reading ${repo}@${branch}`);
+  const sha = (await response.text()).trim();
+  if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Unexpected commit id for ${repo}@${branch}`);
+  heads.set(key, { sha, etag: response.headers.get("etag") });
+  return sha;
 };

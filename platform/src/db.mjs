@@ -43,6 +43,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS deployments_project ON deployments(project_id, created_at DESC);
 `);
 
+// Additive migrations for databases created by earlier versions.
+const addColumn = (table, column, definition) => {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all().map((row) => row.name);
+  if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+};
+addColumn("projects", "build_env_enc", "TEXT");
+addColumn("projects", "auto_deploy", "INTEGER NOT NULL DEFAULT 1");
+addColumn("projects", "last_seen_sha", "TEXT");
+addColumn("deployments", "ref", "TEXT");
+
 export const now = () => new Date().toISOString();
 export const newId = () => randomBytes(8).toString("hex");
 
@@ -66,8 +76,20 @@ export const decryptEnv = (value) => {
   return JSON.parse(Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8"));
 };
 
-const projectColumns = ["slug", "repo", "branch", "root_dir", "port", "memory_mb", "cpus", "env_enc", "status", "live_deployment_id"];
-const deploymentColumns = ["status", "source_deployment_id", "run_id", "run_url", "steps", "commit_sha", "image", "container_name", "error", "finished_at"];
+// Build variables travel to the builder encrypted with a separate key and bound to one
+// deployment id, so a captured ciphertext cannot be replayed into another build.
+export const encryptForBuild = (env, deploymentId) => {
+  if (!config.buildKey) throw new Error("PLATFORM_BUILD_KEY is not configured");
+  const transitKey = createHash("sha256").update(config.buildKey).digest();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", transitKey, iv);
+  cipher.setAAD(Buffer.from(deploymentId));
+  const data = Buffer.concat([cipher.update(JSON.stringify(env), "utf8"), cipher.final()]);
+  return [iv, cipher.getAuthTag(), data].map((part) => part.toString("base64")).join(".");
+};
+
+const projectColumns = ["slug", "repo", "branch", "root_dir", "port", "memory_mb", "cpus", "env_enc", "build_env_enc", "auto_deploy", "last_seen_sha", "status", "live_deployment_id"];
+const deploymentColumns = ["status", "source_deployment_id", "run_id", "run_url", "steps", "commit_sha", "ref", "image", "container_name", "error", "finished_at"];
 
 const updater = (table, allowed) => (id, fields) => {
   const keys = Object.keys(fields).filter((field) => allowed.includes(field));
@@ -84,9 +106,9 @@ export const projects = {
   bySlug: (slug) => db.prepare("SELECT * FROM projects WHERE slug = ?").get(slug),
   insert: (project) => {
     const stamp = now();
-    db.prepare(`INSERT INTO projects (id, slug, repo, branch, root_dir, port, memory_mb, cpus, env_enc, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`)
-      .run(project.id, project.slug, project.repo, project.branch, project.root_dir, project.port, project.memory_mb, project.cpus, project.env_enc, stamp, stamp);
+    db.prepare(`INSERT INTO projects (id, slug, repo, branch, root_dir, port, memory_mb, cpus, env_enc, build_env_enc, auto_deploy, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`)
+      .run(project.id, project.slug, project.repo, project.branch, project.root_dir, project.port, project.memory_mb, project.cpus, project.env_enc, project.build_env_enc, project.auto_deploy, stamp, stamp);
   },
   update: updater("projects", projectColumns),
   remove: (id) => db.prepare("DELETE FROM projects WHERE id = ?").run(id),
@@ -97,6 +119,7 @@ export const deployments = {
   forProject: (projectId, limit = 15) => db.prepare("SELECT * FROM deployments WHERE project_id = ? ORDER BY created_at DESC LIMIT ?").all(projectId, limit),
   withImages: (projectId) => db.prepare("SELECT * FROM deployments WHERE project_id = ? AND image IS NOT NULL ORDER BY created_at DESC").all(projectId),
   active: () => db.prepare("SELECT * FROM deployments WHERE status IN ('queued', 'building', 'deploying')").all(),
+  queuedPush: (projectId) => db.prepare("SELECT * FROM deployments WHERE project_id = ? AND status = 'queued' AND trigger = 'push'").all(projectId),
   insert: (deployment) => {
     db.prepare("INSERT INTO deployments (id, project_id, trigger, status, source_deployment_id, image, commit_sha, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)")
       .run(deployment.id, deployment.project_id, deployment.trigger, deployment.source_deployment_id ?? null, deployment.image ?? null, deployment.commit_sha ?? null, now());

@@ -4,7 +4,7 @@ import { config, engineReady } from "./config.mjs";
 import { projects } from "./db.mjs";
 import {
   InputError, cancelDeployment, createProject, deleteProject, deployProject, describeProject, getDeployment,
-  projectLogs, reconcile, rollbackProject, startProject, stopProject, updateProject,
+  projectLogs, reconcile, rollbackProject, startPolling, startProject, stopProject, updateProject,
 } from "./engine.mjs";
 import { publicRepos } from "./github.mjs";
 import { inventory } from "./inventory.mjs";
@@ -66,7 +66,7 @@ const routes = [
   ["GET", /^\/api\/platform\/projects\/([a-f0-9]{16})$/, (ctx) => ({ project: describeProject(project(ctx.params[0])) })],
   ["PATCH", /^\/api\/platform\/projects\/([a-f0-9]{16})$/, async (ctx) => ({ project: updateProject(ctx.params[0], await ctx.body()) })],
   ["DELETE", /^\/api\/platform\/projects\/([a-f0-9]{16})$/, async (ctx) => { await deleteProject(ctx.params[0]); return { deleted: true }; }],
-  ["POST", /^\/api\/platform\/projects\/([a-f0-9]{16})\/deploy$/, (ctx) => ({ deploymentId: deployProject(ctx.params[0]) })],
+  ["POST", /^\/api\/platform\/projects\/([a-f0-9]{16})\/deploy$/, async (ctx) => ({ deploymentId: await deployProject(ctx.params[0]) })],
   ["POST", /^\/api\/platform\/projects\/([a-f0-9]{16})\/rollback$/, async (ctx) => ({ deploymentId: rollbackProject(ctx.params[0], String((await ctx.body()).deploymentId || "")) })],
   ["POST", /^\/api\/platform\/projects\/([a-f0-9]{16})\/stop$/, async (ctx) => { await stopProject(ctx.params[0]); return { stopped: true }; }],
   ["POST", /^\/api\/platform\/projects\/([a-f0-9]{16})\/start$/, (ctx) => ({ deploymentId: startProject(ctx.params[0]) })],
@@ -109,5 +109,5 @@ createServer(async (request, response) => {
   }
 }).listen(port, host, () => {
   console.log(`platform listening on ${host}:${port} (auth: ${authMode}, engine: ${engineReady() ? "ready" : "disabled"})`);
-  if (engineReady()) reconcile();
+  if (engineReady()) reconcile().then(startPolling);
 });

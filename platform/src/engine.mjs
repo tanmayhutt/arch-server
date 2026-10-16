@@ -1,7 +1,7 @@
 import { config, engineReady } from "./config.mjs";
-import { decryptEnv, deployments, encryptEnv, newId, now, projects } from "./db.mjs";
+import { decryptEnv, deployments, encryptEnv, encryptForBuild, newId, now, projects } from "./db.mjs";
 import { DockerError, demuxLogs, docker } from "./docker.mjs";
-import { cancelRun, dispatchBuild, getRun, getRunSteps } from "./github.mjs";
+import { cancelRun, dispatchBuild, getRun, getRunSteps, headCommit } from "./github.mjs";
 import { pushRoutes } from "./router.mjs";
 
 const MANAGED_LABEL = "arch.platform.managed";
@@ -39,17 +39,19 @@ const numberIn = (value, min, max, label) => {
 };
 
 // env: { KEY: "value" } sets, { KEY: null } deletes, keys not mentioned are kept.
-const mergeEnv = (current, changes = {}) => {
+const mergeEnv = (current, changes = {}, { build = false } = {}) => {
   if (typeof changes !== "object" || Array.isArray(changes)) throw new InputError("Invalid environment variables");
   const next = { ...current };
   for (const [name, value] of Object.entries(changes)) {
     if (!ENV_KEY.test(name)) throw new InputError(`Invalid variable name: ${name.slice(0, 40)}`);
-    if (name === "PORT") throw new InputError("PORT is set from the project port");
+    if (!build && name === "PORT") throw new InputError("PORT is set from the project port");
+    if (build && /^BUILDKIT_/i.test(name)) throw new InputError(`${name} is reserved for the build system`);
     if (value === null) delete next[name];
     else if (typeof value === "string" && value.length <= 8192) next[name] = value;
     else throw new InputError(`Invalid value for ${name}`);
   }
   if (Object.keys(next).length > 100) throw new InputError("Too many environment variables");
+  if (build && JSON.stringify(next).length > 16384) throw new InputError("Build variables are limited to 16 KB in total");
   return next;
 };
 
@@ -74,6 +76,7 @@ const publicDeployment = (deployment, { withLog = false } = {}) => ({
   runUrl: deployment.run_url,
   steps: deployment.steps ? JSON.parse(deployment.steps) : [],
   commit: deployment.commit_sha,
+  ref: deployment.ref,
   hasImage: Boolean(deployment.image),
   error: deployment.error,
   createdAt: deployment.created_at,
@@ -82,8 +85,7 @@ const publicDeployment = (deployment, { withLog = false } = {}) => ({
 });
 
 export const describeProject = (project, { withHistory = true } = {}) => {
-  let envKeys = [];
-  try { envKeys = Object.keys(decryptEnv(project.env_enc)).sort(); } catch { envKeys = []; }
+  const keysOf = (value) => { try { return Object.keys(decryptEnv(value)).sort(); } catch { return []; } };
   return {
     id: project.id,
     slug: project.slug,
@@ -94,7 +96,10 @@ export const describeProject = (project, { withHistory = true } = {}) => {
     port: project.port,
     memoryMb: project.memory_mb,
     cpus: project.cpus,
-    envKeys,
+    envKeys: keysOf(project.env_enc),
+    buildEnvKeys: keysOf(project.build_env_enc),
+    autoDeploy: Boolean(project.auto_deploy),
+    lastSeenCommit: project.last_seen_sha,
     status: project.status,
     liveDeploymentId: project.live_deployment_id,
     createdAt: project.created_at,
@@ -200,6 +205,7 @@ const release = async (projectId, deploymentId) => {
     Labels: { [MANAGED_LABEL]: "true", "arch.platform.project": project.slug, "arch.platform.deployment": deploymentId },
     HostConfig: {
       NetworkMode: config.appsNetwork,
+      Dns: config.appDns,
       Memory: project.memory_mb * 1024 * 1024,
       MemorySwap: project.memory_mb * 1024 * 1024,
       NanoCpus: Math.round(project.cpus * 1e9),
@@ -242,10 +248,13 @@ const fail = (deploymentId, error) => {
 const build = async (projectId, deploymentId) => {
   const project = projects.get(projectId);
   const image = imageFor(project.slug, deploymentId);
+  const ref = deployments.get(deploymentId).ref || project.branch;
+  const buildVars = decryptEnv(project.build_env_enc);
+  const buildEnv = Object.keys(buildVars).length ? encryptForBuild(buildVars, deploymentId) : "";
   deployments.update(deploymentId, { status: "building" });
-  log(deploymentId, `Building ${project.repo}@${project.branch}${project.root_dir ? ` (${project.root_dir})` : ""} in GitHub Actions`);
+  log(deploymentId, `Building ${project.repo}@${/^[a-f0-9]{40}$/.test(ref) ? ref.slice(0, 7) : ref}${project.root_dir ? ` (${project.root_dir})` : ""} in GitHub Actions${buildEnv ? ` with ${Object.keys(buildVars).length} build variable(s)` : ""}`);
 
-  const { runId, runUrl } = await dispatchBuild({ deploymentId, repo: project.repo, ref: project.branch, rootDir: project.root_dir, image });
+  const { runId, runUrl } = await dispatchBuild({ deploymentId, repo: project.repo, ref, rootDir: project.root_dir, image, buildEnv });
   deployments.update(deploymentId, { run_id: runId, run_url: runUrl });
   log(deploymentId, `Build run ${runId} started`);
 
@@ -279,12 +288,13 @@ const requireEngine = () => {
   if (!engineReady()) throw new InputError("Deploy engine is not configured on the server");
 };
 
-const startDeployment = (projectId, trigger, { sourceDeploymentId, needsBuild }) => {
+const startDeployment = (projectId, trigger, { sourceDeploymentId, needsBuild, ref }) => {
   const project = projects.get(projectId);
   if (!project) throw new InputError("Project not found");
   const source = sourceDeploymentId ? deployments.get(sourceDeploymentId) : null;
   const id = newId();
   deployments.insert({ id, project_id: projectId, trigger, source_deployment_id: sourceDeploymentId, image: source?.image, commit_sha: source?.commit_sha });
+  if (ref) deployments.update(id, { ref });
   exclusive(projectId, async () => {
     if (deployments.get(id).status === "cancelled") return;
     try {
@@ -298,7 +308,22 @@ const startDeployment = (projectId, trigger, { sourceDeploymentId, needsBuild })
   return id;
 };
 
-export const createProject = (input) => {
+// Builds deploy an exact commit, so a push during the build cannot change what ships.
+const resolveHead = async (project) => {
+  try {
+    const sha = await headCommit(project.repo, project.branch);
+    projects.update(project.id, { last_seen_sha: sha });
+    return sha;
+  } catch {
+    return project.branch;
+  }
+};
+
+const requireBuildKey = (buildEnvEnc) => {
+  if (Object.keys(decryptEnv(buildEnvEnc)).length && !config.buildKey) throw new InputError("Build variables need PLATFORM_BUILD_KEY on the server");
+};
+
+export const createProject = async (input) => {
   requireEngine();
   const slug = checkPath(String(input.slug || "").toLowerCase(), SLUG, "subdomain");
   if (config.reservedSlugs.has(slug)) throw new InputError("That subdomain is reserved");
@@ -315,9 +340,13 @@ export const createProject = (input) => {
     memory_mb: memoryMb,
     cpus: numberIn(input.cpus ?? 0.5, 0.1, 2, "CPU"),
     env_enc: encryptEnv(mergeEnv({}, input.env)),
+    build_env_enc: encryptEnv(mergeEnv({}, input.buildEnv, { build: true })),
+    auto_deploy: input.autoDeploy === false ? 0 : 1,
   };
+  requireBuildKey(project.build_env_enc);
   projects.insert(project);
-  const deploymentId = startDeployment(project.id, "create", { needsBuild: true });
+  const ref = await resolveHead(projects.get(project.id));
+  const deploymentId = startDeployment(project.id, "create", { needsBuild: true, ref });
   return { project: describeProject(projects.get(project.id)), deploymentId };
 };
 
@@ -327,6 +356,13 @@ export const updateProject = (id, input) => {
   if (!project) throw new InputError("Project not found");
   const fields = {};
   if (input.branch !== undefined) fields.branch = checkPath(String(input.branch).trim(), BRANCH, "branch");
+  if (input.autoDeploy !== undefined) fields.auto_deploy = input.autoDeploy ? 1 : 0;
+  if (input.buildEnv !== undefined) {
+    fields.build_env_enc = encryptEnv(mergeEnv(decryptEnv(project.build_env_enc), input.buildEnv, { build: true }));
+    requireBuildKey(fields.build_env_enc);
+  }
+  // A branch change takes effect on the next deploy, not as a surprise automatic one.
+  if (fields.branch && fields.branch !== project.branch) fields.last_seen_sha = null;
   if (input.rootDir !== undefined) fields.root_dir = checkPath(String(input.rootDir).trim().replace(/\/+$/, ""), ROOT, "root directory");
   if (input.port !== undefined) fields.port = numberIn(input.port, 1, 65535, "Port");
   if (input.cpus !== undefined) fields.cpus = numberIn(input.cpus, 0.1, 2, "CPU");
@@ -339,9 +375,12 @@ export const updateProject = (id, input) => {
   return describeProject(projects.get(id));
 };
 
-export const deployProject = (id) => {
+export const deployProject = async (id) => {
   requireEngine();
-  return startDeployment(id, "manual", { needsBuild: true });
+  const project = projects.get(id);
+  if (!project) throw new InputError("Project not found");
+  requireBuildKey(project.build_env_enc);
+  return startDeployment(id, "manual", { needsBuild: true, ref: await resolveHead(project) });
 };
 
 export const rollbackProject = (id, deploymentId) => {
@@ -376,7 +415,7 @@ export const startProject = (id) => {
   const project = projects.get(id);
   if (!project) throw new InputError("Project not found");
   const latest = deployments.withImages(id).find((item) => item.status !== "failed");
-  if (!latest) return startDeployment(id, "start", { needsBuild: true });
+  if (!latest) return startDeployment(id, "start", { needsBuild: true, ref: project.last_seen_sha || project.branch });
   checkBudget(project.memory_mb, id);
   return startDeployment(id, "start", { sourceDeploymentId: latest.id });
 };
@@ -419,4 +458,50 @@ export const reconcile = async () => {
       await sleep(3000);
     }
   }
+};
+
+// ---------- deploy on push ----------
+
+// Polling instead of webhooks keeps every console path behind Cloudflare Access: nothing
+// on the server has to accept unauthenticated requests from GitHub.
+let polling = false;
+let pausedUntil = 0;
+const pollErrors = new Map();
+
+const pollOnce = async () => {
+  if (!engineReady() || Date.now() < pausedUntil) return;
+  for (const project of projects.all()) {
+    if (project.status !== "active" || !project.auto_deploy) continue;
+    try {
+      const sha = await headCommit(project.repo, project.branch);
+      pollErrors.delete(project.id);
+      if (sha === project.last_seen_sha) continue;
+      projects.update(project.id, { last_seen_sha: sha });
+      // The first observation after a branch change only records a baseline.
+      if (!project.last_seen_sha) continue;
+      for (const queued of deployments.queuedPush(project.id)) {
+        deployments.update(queued.id, { status: "cancelled", finished_at: now() });
+        log(queued.id, "Superseded by a newer push");
+      }
+      const id = startDeployment(project.id, "push", { needsBuild: true, ref: sha });
+      log(id, `New commit ${sha.slice(0, 7)} on ${project.branch}`);
+    } catch (error) {
+      if (/GitHub (403|429)/.test(error.message)) {
+        pausedUntil = Date.now() + 10 * 60 * 1000;
+        console.error(`polling paused for 10 minutes: ${error.message}`);
+        return;
+      }
+      const last = pollErrors.get(project.id) || 0;
+      if (Date.now() - last > 60 * 60 * 1000) console.error(`polling ${project.slug}: ${error.message}`);
+      pollErrors.set(project.id, Date.now());
+    }
+  }
+};
+
+export const startPolling = () => {
+  setInterval(() => {
+    if (polling) return;
+    polling = true;
+    pollOnce().finally(() => { polling = false; });
+  }, config.pollIntervalMs);
 };

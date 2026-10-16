@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""Forced command for the builder SSH key.
+
+The builder may only stream one gzipped `docker save` archive for one deployment image.
+Every place an archive can name an image (manifest.json, the legacy repositories file, and
+OCI index annotations used by the containerd image store) must name exactly the requested
+arch-apps tag. Anything else is rejected before Docker sees it, so a compromised build cannot
+overwrite an image used by the server's own services.
+"""
+import gzip
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+MAX_ARCHIVE_BYTES = 4 * 1024 ** 3
+IMAGE = re.compile(r"^arch-apps/[a-z0-9-]{3,32}:[a-f0-9]{16}$")
+
+
+def fail(message):
+    print(f"arch-image-load: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def requested_image():
+    parts = os.environ.get("SSH_ORIGINAL_COMMAND", "").split()
+    if len(parts) != 2 or parts[0] != "load" or not IMAGE.match(parts[1]):
+        fail("usage: load arch-apps/<project>:<deployment-id>")
+    return parts[1]
+
+
+def receive(path):
+    written = 0
+    with gzip.GzipFile(fileobj=sys.stdin.buffer) as source, open(path, "wb") as target:
+        while chunk := source.read(1024 * 1024):
+            written += len(chunk)
+            if written > MAX_ARCHIVE_BYTES:
+                fail("archive exceeds the size limit")
+            target.write(chunk)
+
+
+def read_json(archive, name):
+    try:
+        member = archive.getmember(name)
+    except KeyError:
+        return None
+    if not member.isfile() or member.size > 1024 * 1024:
+        fail(f"{name} is not a small regular file")
+    return json.load(archive.extractfile(member))
+
+
+def validate(path, image):
+    repository, tag = image.split(":")
+    with tarfile.open(path) as archive:
+        for member in archive.getmembers():
+            if member.name.startswith("/") or ".." in member.name.split("/") or member.isdev() or member.isfifo():
+                fail(f"unsafe archive entry: {member.name[:80]}")
+            # docker save links legacy layer paths into blobs/; links must stay inside the archive.
+            if member.issym() or member.islnk():
+                base = os.path.dirname(member.name) if member.issym() else ""
+                target = os.path.normpath(os.path.join(base, member.linkname))
+                if member.linkname.startswith("/") or target.startswith(".."):
+                    fail(f"unsafe link: {member.name[:80]}")
+
+        manifest = read_json(archive, "manifest.json")
+        if not isinstance(manifest, list) or len(manifest) != 1 or manifest[0].get("RepoTags") != [image]:
+            fail("manifest.json must contain exactly the requested tag")
+
+        repositories = read_json(archive, "repositories")
+        if repositories is not None and repositories != {repository: {tag: repositories.get(repository, {}).get(tag)}}:
+            fail("repositories file names an unexpected image")
+
+        index = read_json(archive, "index.json")
+        if index is not None:
+            entries = index.get("manifests", [])
+            if len(entries) != 1:
+                fail("index.json must describe exactly one image")
+            annotations = entries[0].get("annotations") or {}
+            name = annotations.get("io.containerd.image.name")
+            if name is not None and name not in (image, f"docker.io/{image}"):
+                fail("index.json names an unexpected image")
+            ref = annotations.get("org.opencontainers.image.ref.name")
+            if ref is not None and ref not in (tag, image, f"docker.io/{image}"):
+                fail("index.json references an unexpected tag")
+
+
+def main():
+    image = requested_image()
+    if shutil.disk_usage("/var/tmp").free < 2 * MAX_ARCHIVE_BYTES:
+        fail("not enough free disk space")
+    with tempfile.TemporaryDirectory(prefix="arch-image-load.", dir="/var/tmp") as work:
+        path = os.path.join(work, "image.tar")
+        receive(path)
+        validate(path, image)
+        with open(path, "rb") as archive:
+            result = subprocess.run(["docker", "load"], stdin=archive, capture_output=True, text=True)
+        sys.stdout.write(result.stdout)
+        sys.stderr.write(result.stderr)
+        sys.exit(result.returncode)
+
+
+if __name__ == "__main__":
+    main()
