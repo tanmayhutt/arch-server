@@ -5,7 +5,10 @@
 !assets/**
 !monitor/
 !monitor/**
+!platform/
+!platform/**
 
 website/node_modules
+platform/node_modules
 website/dist
 website/npm-debug.log

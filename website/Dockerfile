@@ -18,5 +18,6 @@ FROM nginx:1.30.4-alpine3.24
 COPY --from=build /app/website/dist /usr/share/nginx/html
 # Note: nginx.conf is inside the website folder in the root context
 COPY website/nginx.conf /etc/nginx/conf.d/default.conf
+COPY website/nginx-security-headers.conf /etc/nginx/snippets/security-headers.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

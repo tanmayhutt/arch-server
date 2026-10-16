@@ -15,6 +15,59 @@ services:
     depends_on:
       - telemetry
 
+  # Deploy console API. Phase 1 is inventory only: Docker is reached through a
+  # proxy that allows GET requests and nothing else.
+  platform:
+    build:
+      context: .
+      dockerfile: platform/Dockerfile
+    container_name: arch-server-platform
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - DOCKER_HOST=tcp://docker-proxy:2375
+      - CF_ACCESS_TEAM_DOMAIN=${CF_ACCESS_TEAM_DOMAIN:-}
+      - CF_ACCESS_AUD=${CF_ACCESS_AUD:-}
+      - PLATFORM_OWNER_EMAIL=${PLATFORM_OWNER_EMAIL:-}
+    networks:
+      - default
+      - docker-api
+    depends_on:
+      - docker-proxy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: arch-server-docker-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - NETWORKS=1
+      - VOLUMES=1
+      - INFO=1
+      - POST=0
+      - LOG_LEVEL=warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-api
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+
   telemetry:
     build:
       context: .
@@ -47,3 +100,8 @@ services:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     security_opt:
       - no-new-privileges:true
+
+networks:
+  # No external connectivity; only the platform service can reach the Docker proxy.
+  docker-api:
+    internal: true

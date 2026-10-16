@@ -1,0 +1,16 @@
+{
+  "name": "arch-server-platform",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check": "node --check src/server.mjs && node --check src/auth.mjs && node --check src/docker.mjs && node --check src/inventory.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.12"
+  }
+}

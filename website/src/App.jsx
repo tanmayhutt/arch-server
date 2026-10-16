@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -9,9 +10,13 @@ import NotFound from './pages/NotFound';
 
 import Architecture from './pages/Architecture';
 
+// Owner-only console, loaded as a separate chunk so public visitors never download it.
+const Console = lazy(() => import('./pages/console/Console'));
+
 function App() {
   return (
     <Routes>
+      <Route path="console/*" element={<Suspense fallback={null}><Console /></Suspense>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="server" element={<ArchServer />} />
