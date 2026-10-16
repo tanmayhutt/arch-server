@@ -34,7 +34,8 @@ const buildConfig = (routes) => ({
 export const pushRoutes = async (routes) => {
   const response = await fetch(`${config.router.adminUrl}/load`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    // Caddy enforces the configured admin origins and rejects requests without an Origin header.
+    headers: { "Content-Type": "application/json", Origin: new URL(config.router.adminUrl).origin },
     body: JSON.stringify(buildConfig(routes)),
     signal: AbortSignal.timeout(10000),
   });
