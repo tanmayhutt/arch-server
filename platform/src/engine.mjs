@@ -165,15 +165,20 @@ const waitHealthy = async (deploymentId, name, port) => {
 };
 
 const pruneImages = async (project) => {
-  const keep = new Set([project.live_deployment_id]);
+  // Rollbacks reuse an earlier image tag, so retention is decided per image, not per deployment.
   const withImages = deployments.withImages(project.id);
+  const keep = new Set();
+  const live = withImages.find((deployment) => deployment.id === project.live_deployment_id);
+  if (live) keep.add(live.image);
   for (const deployment of withImages) {
     if (keep.size >= KEEP_IMAGES) break;
-    if (deployment.status !== "failed") keep.add(deployment.id);
+    if (deployment.status !== "failed") keep.add(deployment.image);
   }
   for (const deployment of withImages) {
-    if (keep.has(deployment.id)) continue;
-    try { await docker.removeImage(deployment.image); } catch { /* already gone or in use */ }
+    if (keep.has(deployment.image)) continue;
+    if (!withImages.some((other) => other.image === deployment.image && keep.has(other.image))) {
+      try { await docker.removeImage(deployment.image); } catch { /* already gone or in use */ }
+    }
     deployments.update(deployment.id, { image: null });
   }
 };
