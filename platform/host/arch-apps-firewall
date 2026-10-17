@@ -22,6 +22,8 @@ iptables -C INPUT -s "$SUBNET" -j ARCH-APPS-IN 2>/dev/null || iptables -I INPUT 
 chain ARCH-APPS-FWD
 iptables -A ARCH-APPS-FWD -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
 iptables -A ARCH-APPS-FWD -d "$SUBNET" -j RETURN
+# No direct mail delivery from apps: spam would land on the home IP's reputation.
+iptables -A ARCH-APPS-FWD -p tcp --dport 25 -j DROP
 for range in "${BLOCKED[@]}"; do
   iptables -A ARCH-APPS-FWD -d "$range" -j DROP
 done

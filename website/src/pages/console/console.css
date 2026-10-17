@@ -233,3 +233,23 @@
 .console-toggle strong { color: var(--text); font-size: 12.5px; font-weight: 600; }
 .console-toggle small { color: var(--subtle); font-size: 12px; line-height: 1.45; }
 .console-toggle input:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+
+.console-requests { margin: 0; padding: 0; list-style: none; }
+.console-requests > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.console-requests > li:last-child { border-bottom: 0; }
+.console-requests strong { color: var(--text); font-size: 14px; font-weight: 600; }
+.console-request-message { margin: 8px 0 0; padding: 8px 10px; color: var(--muted); border-left: 2px solid var(--line-strong); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.console-subheading { margin: 18px 0 2px; color: var(--subtle); font: 600 11px/1.3 "JetBrains Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+.console-decided { margin: 12px 0 14px; font-size: 12px; line-height: 1.5; }
+.console-guest-tag { padding: 1px 7px; color: var(--amber); border: 1px solid rgba(168,102,63,0.35); border-radius: 999px; font-size: 11.5px; }
+.console-invite-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 6px; background: #fff; }
+.console-invite-code code { color: var(--text); font: 600 20px/1.2 "JetBrains Mono", monospace; letter-spacing: 0.06em; overflow-wrap: anywhere; }
+.console-gate { padding-bottom: 22px; }
+.console-gate > svg { color: var(--ice); }
+.console-gate h2 { margin: 8px 0 6px; color: var(--text); font-size: 18px; font-weight: 600; }
+.console-gate p { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.console-code-form { max-width: 360px; }
+@media (max-width: 720px) {
+  .console-requests > li { grid-template-columns: 1fr; }
+  .console-invite-code { flex-direction: column; align-items: stretch; }
+}

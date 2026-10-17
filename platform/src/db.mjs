@@ -52,6 +52,32 @@ addColumn("projects", "build_env_enc", "TEXT");
 addColumn("projects", "auto_deploy", "INTEGER NOT NULL DEFAULT 1");
 addColumn("projects", "last_seen_sha", "TEXT");
 addColumn("deployments", "ref", "TEXT");
+addColumn("projects", "guest_id", "TEXT");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS access_requests (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    repo TEXT,
+    message TEXT,
+    source_hash TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    decided_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS guests (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT,
+    status TEXT NOT NULL,
+    invite_hash TEXT,
+    invite_expires_at TEXT,
+    invite_attempts INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    activated_at TEXT
+  );
+`);
 
 export const now = () => new Date().toISOString();
 export const newId = () => randomBytes(8).toString("hex");
@@ -88,7 +114,7 @@ export const encryptForBuild = (env, deploymentId) => {
   return [iv, cipher.getAuthTag(), data].map((part) => part.toString("base64")).join(".");
 };
 
-const projectColumns = ["slug", "repo", "branch", "root_dir", "port", "memory_mb", "cpus", "env_enc", "build_env_enc", "auto_deploy", "last_seen_sha", "status", "live_deployment_id"];
+const projectColumns = ["guest_id", "slug", "repo", "branch", "root_dir", "port", "memory_mb", "cpus", "env_enc", "build_env_enc", "auto_deploy", "last_seen_sha", "status", "live_deployment_id"];
 const deploymentColumns = ["status", "source_deployment_id", "run_id", "run_url", "steps", "commit_sha", "ref", "image", "container_name", "error", "finished_at"];
 
 const updater = (table, allowed) => (id, fields) => {
@@ -106,12 +132,13 @@ export const projects = {
   bySlug: (slug) => db.prepare("SELECT * FROM projects WHERE slug = ?").get(slug),
   insert: (project) => {
     const stamp = now();
-    db.prepare(`INSERT INTO projects (id, slug, repo, branch, root_dir, port, memory_mb, cpus, env_enc, build_env_enc, auto_deploy, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`)
-      .run(project.id, project.slug, project.repo, project.branch, project.root_dir, project.port, project.memory_mb, project.cpus, project.env_enc, project.build_env_enc, project.auto_deploy, stamp, stamp);
+    db.prepare(`INSERT INTO projects (id, guest_id, slug, repo, branch, root_dir, port, memory_mb, cpus, env_enc, build_env_enc, auto_deploy, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`)
+      .run(project.id, project.guest_id ?? null, project.slug, project.repo, project.branch, project.root_dir, project.port, project.memory_mb, project.cpus, project.env_enc, project.build_env_enc, project.auto_deploy, stamp, stamp);
   },
   update: updater("projects", projectColumns),
   remove: (id) => db.prepare("DELETE FROM projects WHERE id = ?").run(id),
+  forGuest: (guestId) => db.prepare("SELECT * FROM projects WHERE guest_id = ? ORDER BY created_at").all(guestId),
 };
 
 export const deployments = {
@@ -128,4 +155,30 @@ export const deployments = {
   appendLog: (id, line) => {
     db.prepare("UPDATE deployments SET log = substr(log || ?, -65536) WHERE id = ?").run(`${new Date().toISOString().slice(11, 19)}  ${line}\n`, id);
   },
+};
+
+export const accessRequests = {
+  all: () => db.prepare("SELECT * FROM access_requests ORDER BY created_at DESC LIMIT 200").all(),
+  get: (id) => db.prepare("SELECT * FROM access_requests WHERE id = ?").get(id),
+  pendingCount: () => db.prepare("SELECT COUNT(*) AS n FROM access_requests WHERE status = 'pending'").get().n,
+  pendingForEmail: (email) => db.prepare("SELECT * FROM access_requests WHERE email = ? AND status = 'pending'").get(email),
+  insert: (request) => db.prepare("INSERT INTO access_requests (id, name, email, repo, message, source_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(request.id, request.name, request.email, request.repo, request.message, request.source_hash, now()),
+  decide: (id, status) => db.prepare("UPDATE access_requests SET status = ?, decided_at = ? WHERE id = ?").run(status, now(), id),
+  // Decided requests are kept for 30 days, then removed; approved people live on in guests.
+  purge: () => db.prepare("DELETE FROM access_requests WHERE status != 'pending' AND decided_at < ?").run(new Date(Date.now() - 30 * 86400000).toISOString()),
+};
+
+export const guests = {
+  all: () => db.prepare("SELECT * FROM guests ORDER BY created_at DESC").all(),
+  get: (id) => db.prepare("SELECT * FROM guests WHERE id = ?").get(id),
+  byEmail: (email) => db.prepare("SELECT * FROM guests WHERE email = ?").get(email),
+  upsertInvite: (guest) => db.prepare(`INSERT INTO guests (id, email, name, status, invite_hash, invite_expires_at, invite_attempts, created_at)
+      VALUES (?, ?, ?, 'invited', ?, ?, 0, ?)
+      ON CONFLICT(email) DO UPDATE SET name = excluded.name, status = 'invited', invite_hash = excluded.invite_hash,
+        invite_expires_at = excluded.invite_expires_at, invite_attempts = 0`)
+    .run(guest.id, guest.email, guest.name, guest.invite_hash, guest.invite_expires_at, now()),
+  failedAttempt: (id) => db.prepare("UPDATE guests SET invite_attempts = invite_attempts + 1 WHERE id = ?").run(id),
+  activate: (id) => db.prepare("UPDATE guests SET status = 'active', invite_hash = NULL, invite_expires_at = NULL, invite_attempts = 0, activated_at = ? WHERE id = ?").run(now(), id),
+  revoke: (id) => db.prepare("UPDATE guests SET status = 'revoked', invite_hash = NULL, invite_expires_at = NULL WHERE id = ?").run(id),
 };

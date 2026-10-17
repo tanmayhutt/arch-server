@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, CircleStop, ExternalLink, GitBranch, History, Play, Plus, RotateCcw, ScrollText, Settings2, Trash2, X } from "lucide-react";
-import { activeStatuses, api, formatAgo } from "./api";
+import { activeStatuses, formatAgo, request } from "./api";
+
+// The same interface serves the owner (/api/platform) and approved guests (/api/guest).
+// The server enforces every guest restriction; the mode only adjusts what the form offers.
+const ApiContext = createContext({ base: "/api/platform", mode: "owner" });
+const useApi = () => {
+  const { base } = useContext(ApiContext);
+  return useCallback((path, options) => request(`${base}${path}`, options), [base]);
+};
+const useMode = () => useContext(ApiContext).mode;
 
 const statusCopy = {
   queued: "Queued", building: "Building", deploying: "Deploying", live: "Live", failed: "Failed",
@@ -81,12 +90,15 @@ const toggleIn = (setter) => (key) => setter((current) => {
 });
 
 const NewProject = ({ appDomain, onCreated, onClose }) => {
+  const api = useApi();
+  const mode = useMode();
   const [repos, setRepos] = useState([]);
-  const [form, setForm] = useState({ repo: "", branch: "main", slug: "", port: "3000", memoryMb: "256", rootDir: "", env: "", buildEnv: "", autoDeploy: true });
+  const [form, setForm] = useState({ repo: "", branch: "main", slug: "", port: "3000", memoryMb: mode === "guest" ? "128" : "256", rootDir: "", env: "", buildEnv: "", autoDeploy: true });
+  const hostname = form.slug ? `${mode === "guest" ? `${form.slug.replace(/-guest$/, "")}-guest` : form.slug}.${appDomain}` : "";
   const [state, setState] = useState({ busy: false, error: "" });
   const slugTouched = useRef(false);
 
-  useEffect(() => { api("/repos").then((data) => setRepos(data.repos)).catch(() => {}); }, []);
+  useEffect(() => { if (mode === "owner") api("/repos").then((data) => setRepos(data.repos)).catch(() => {}); }, [api, mode]);
 
   const update = (key, value) => setForm((current) => {
     const next = { ...current, [key]: value };
@@ -115,7 +127,7 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
   return (
     <Sheet title="New project" onClose={onClose}>
       <form className="console-form" onSubmit={submit}>
-        <Field label="GitHub repository" hint="owner/name. Public repositories are suggested; private ones work when the builder token can read them.">
+        <Field label="GitHub repository" hint={mode === "guest" ? "owner/name of a public GitHub repository." : "owner/name. Public repositories are suggested; private ones work when the builder token can read them."}>
           <input required list="console-repos" value={form.repo} onChange={(event) => update("repo", event.target.value)} placeholder="tanmayhutt/my-app" autoComplete="off" spellCheck="false" />
           <datalist id="console-repos">{repos.map((repo) => <option key={repo.fullName} value={repo.fullName}>{repo.language || ""}</option>)}</datalist>
         </Field>
@@ -123,12 +135,12 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
           <Field label="Branch"><input required value={form.branch} onChange={(event) => update("branch", event.target.value)} spellCheck="false" /></Field>
           <Field label="Root directory" hint="Leave empty for the repository root."><input value={form.rootDir} onChange={(event) => update("rootDir", event.target.value)} placeholder="apps/web" spellCheck="false" /></Field>
         </div>
-        <Field label="Subdomain" hint={form.slug ? `https://${form.slug}.${appDomain}` : "Lowercase letters, numbers, and hyphens."}>
+        <Field label="Subdomain" hint={hostname ? `https://${hostname}` : "Lowercase letters, numbers, and hyphens."}>
           <input required value={form.slug} onChange={(event) => { slugTouched.current = true; update("slug", event.target.value.toLowerCase()); }} pattern="[a-z][a-z0-9\-]{1,30}[a-z0-9]" spellCheck="false" />
         </Field>
         <div className="console-form-row">
           <Field label="Port" hint="The app must listen on this port. PORT is set for you."><input required type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} /></Field>
-          <Field label="Memory (MiB)" hint="Hard limit. 256 suits most small apps."><input required type="number" min="64" max="2048" step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
+          <Field label="Memory (MiB)" hint={mode === "guest" ? "Hard limit, up to 256." : "Hard limit. 256 suits most small apps."}><input required type="number" min="64" max={mode === "guest" ? 256 : 2048} step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
         </div>
         <Field label="Runtime variables" hint="Available while the app runs. One KEY=VALUE per line. Stored encrypted and never shown again.">
           <textarea rows={3} value={form.env} onChange={(event) => update("env", event.target.value)} placeholder={"DATABASE_URL=...\nAPI_KEY=..."} spellCheck="false" />
@@ -148,6 +160,8 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
 };
 
 const ProjectSettings = ({ project, onSaved, onClose }) => {
+  const api = useApi();
+  const mode = useMode();
   const [form, setForm] = useState({ branch: project.branch, rootDir: project.rootDir, port: String(project.port), memoryMb: String(project.memoryMb), cpus: String(project.cpus), env: "", buildEnv: "", autoDeploy: project.autoDeploy });
   const [removed, setRemoved] = useState(new Set());
   const [removedBuild, setRemovedBuild] = useState(new Set());
@@ -185,8 +199,8 @@ const ProjectSettings = ({ project, onSaved, onClose }) => {
         </div>
         <div className="console-form-row is-three">
           <Field label="Port"><input type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} /></Field>
-          <Field label="Memory (MiB)"><input type="number" min="64" max="2048" step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
-          <Field label="CPU"><input type="number" min="0.1" max="2" step="0.1" value={form.cpus} onChange={(event) => update("cpus", event.target.value)} /></Field>
+          <Field label="Memory (MiB)"><input type="number" min="64" max={mode === "guest" ? 256 : 2048} step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
+          <Field label="CPU"><input type="number" min="0.1" max={mode === "guest" ? 0.5 : 2} step="0.1" value={form.cpus} onChange={(event) => update("cpus", event.target.value)} /></Field>
         </div>
         <Toggle label="Deploy on push" hint="Checks the branch every 45 seconds and deploys new commits." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />
         <KeyList label="Runtime variables" keys={project.envKeys} removed={removed} onToggle={toggleIn(setRemoved)} />
@@ -209,6 +223,7 @@ const ProjectSettings = ({ project, onSaved, onClose }) => {
 };
 
 const DeploymentView = ({ deploymentId, onClose, onChanged }) => {
+  const api = useApi();
   const [deployment, setDeployment] = useState(null);
   const [error, setError] = useState("");
   const logRef = useRef(null);
@@ -229,7 +244,7 @@ const DeploymentView = ({ deploymentId, onClose, onChanged }) => {
     };
     load();
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [deploymentId, onChanged]);
+  }, [api, deploymentId, onChanged]);
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [deployment?.log]);
 
@@ -264,6 +279,7 @@ const DeploymentView = ({ deploymentId, onClose, onChanged }) => {
 };
 
 const LogsView = ({ project, onClose }) => {
+  const api = useApi();
   const [state, setState] = useState({ logs: "", container: null, error: "", busy: true });
   const logRef = useRef(null);
   const load = useCallback(async () => {
@@ -274,7 +290,7 @@ const LogsView = ({ project, onClose }) => {
     } catch (error) {
       setState((current) => ({ ...current, error: error.message, busy: false }));
     }
-  }, [project.id]);
+  }, [api, project.id]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [state.logs]);
   return (
@@ -290,6 +306,7 @@ const LogsView = ({ project, onClose }) => {
 };
 
 const DeleteProject = ({ project, onDeleted, onClose }) => {
+  const api = useApi();
   const [confirm, setConfirm] = useState("");
   const [state, setState] = useState({ busy: false, error: "" });
   const submit = async (event) => {
@@ -344,6 +361,7 @@ const ProjectCard = ({ project, open, run }) => {
           {project.deployments[0] && <span>{formatAgo(project.deployments[0].createdAt)}</span>}
           <span>{project.memoryMb} MiB · {project.cpus} CPU · port {project.port}</span>
           <span>{project.autoDeploy ? "Deploys on push" : "Manual deploys"}</span>
+          {project.guestEmail && <span className="console-guest-tag">Guest: {project.guestEmail}</span>}
         </p>
       </div>
       <div className="console-project-actions">
@@ -377,7 +395,9 @@ const ProjectCard = ({ project, open, run }) => {
   );
 };
 
-const Projects = () => {
+const ProjectsPanel = () => {
+  const api = useApi();
+  const mode = useMode();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
@@ -389,7 +409,7 @@ const Projects = () => {
     } catch (loadError) {
       setError(loadError.message);
     }
-  }, []);
+  }, [api]);
 
   const anyActive = data?.projects.some((project) => activeStatuses.has(project.deployments[0]?.status));
   useEffect(() => {
@@ -414,7 +434,7 @@ const Projects = () => {
     <section className="console-panel" aria-labelledby="projects-title">
       <div className="console-panel-heading">
         <Play size={16} />
-        <div><span>DEPLOY ENGINE · GITHUB ACTIONS BUILDS</span><h2 id="projects-title">Projects</h2></div>
+        <div><span>{mode === "guest" ? `GUEST · UP TO ${data?.limits?.projects ?? 2} PROJECTS, ${data?.limits?.memoryMb ?? 256} MiB EACH` : "DEPLOY ENGINE · GITHUB ACTIONS BUILDS"}</span><h2 id="projects-title">{mode === "guest" ? "Your projects" : "Projects"}</h2></div>
         {data?.engine && <button type="button" className="console-button is-primary" onClick={() => setModal({ type: "new" })}><Plus size={14} />New project</button>}
       </div>
       {error && <p className="console-form-error" role="alert">{error}</p>}
@@ -423,7 +443,7 @@ const Projects = () => {
       )}
       {data?.engine && !data.projects.length && (
         <div className="console-empty-state">
-          <p>No projects yet. Pick a GitHub repository and it will be built in GitHub Actions, loaded onto this machine, and served at its own subdomain.</p>
+          <p>{mode === "guest" ? "No projects yet. Pick a public GitHub repository and it will be built in GitHub Actions, loaded onto this machine, and served at a name ending in -guest." : "No projects yet. Pick a GitHub repository and it will be built in GitHub Actions, loaded onto this machine, and served at its own subdomain."}</p>
           <button type="button" className="console-button is-primary" onClick={() => setModal({ type: "new" })}><Plus size={14} />Deploy a repository</button>
         </div>
       )}
@@ -439,5 +459,11 @@ const Projects = () => {
     </section>
   );
 };
+
+const Projects = ({ base = "/api/platform", mode = "owner" }) => (
+  <ApiContext.Provider value={{ base, mode }}>
+    <ProjectsPanel />
+  </ApiContext.Provider>
+);
 
 export default Projects;

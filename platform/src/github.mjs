@@ -87,3 +87,13 @@ export const headCommit = async (repo, branch) => {
   heads.set(key, { sha, etag: response.headers.get("etag") });
   return sha;
 };
+
+// Guests may deploy only public repositories; the builder never receives credentials for theirs.
+export const isPublicRepo = async (repo) => {
+  try {
+    const data = await api(`/repos/${repo}`);
+    return data.private === false && data.visibility === "public";
+  } catch {
+    return false;
+  }
+};

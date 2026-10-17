@@ -8,6 +8,7 @@ const navItems = [
   ["/server", "Server", "Physical node"],
   ["/architecture", "Routes", "Trust and traffic"],
   ["/status", "Live", "Coarse telemetry"],
+  ["/apps", "Apps", "What it serves"],
   ["/desktop", "Setup", "The retained desktop"],
   ["/about", "About", "Why I built it"],
 ];
@@ -24,6 +25,7 @@ const pageMeta = {
   "/server": ["The server | arch-server", "Hardware, remote access, storage, tools, and operating details for the physical Arch Linux node."],
   "/architecture": ["How it works | arch-server", "A detailed, zoomable map of the public, private, storage, and deployment routes."],
   "/status": ["Live server status | arch-server", "A privacy-conscious live snapshot of the physical Arch Linux server."],
+  "/apps": ["Apps on this server | arch-server", "Public apps deployed to the self-hosted Arch Linux laptop, and how to request access to deploy here."],
   "/desktop": ["The Arch desktop | arch-server", "The personal Hyprland, Pywal, Waybar, Kitty, Zsh, Wofi, and CAVA setup retained on the server."],
   "/about": ["About the project | arch-server", "How a broken laptop display led to a personal home server instead of discarded hardware."],
 };

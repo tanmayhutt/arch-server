@@ -1,10 +1,12 @@
 import { config, engineReady } from "./config.mjs";
-import { decryptEnv, deployments, encryptEnv, encryptForBuild, newId, now, projects } from "./db.mjs";
+import { decryptEnv, deployments, encryptEnv, encryptForBuild, guests, newId, now, projects } from "./db.mjs";
 import { DockerError, demuxLogs, docker } from "./docker.mjs";
-import { cancelRun, dispatchBuild, getRun, getRunSteps, headCommit } from "./github.mjs";
+import { cancelRun, dispatchBuild, getRun, getRunSteps, headCommit, isPublicRepo } from "./github.mjs";
 import { pushRoutes } from "./router.mjs";
 
 const MANAGED_LABEL = "arch.platform.managed";
+// Guest limits. Guest apps always carry the -guest suffix so they cannot pose as owner pages.
+export const GUEST_LIMITS = { projects: 2, memoryMb: 256, cpus: 0.5, suffix: "-guest" };
 const KEEP_IMAGES = 3;
 const BUILD_TIMEOUT_MS = 30 * 60 * 1000;
 const HEALTH_TIMEOUT_MS = 90 * 1000;
@@ -100,6 +102,7 @@ export const describeProject = (project, { withHistory = true } = {}) => {
     buildEnvKeys: keysOf(project.build_env_enc),
     autoDeploy: Boolean(project.auto_deploy),
     lastSeenCommit: project.last_seen_sha,
+    guestEmail: project.guest_id ? guests.get(project.guest_id)?.email || "unknown" : null,
     status: project.status,
     liveDeploymentId: project.live_deployment_id,
     createdAt: project.created_at,
@@ -323,12 +326,17 @@ const requireBuildKey = (buildEnvEnc) => {
   if (Object.keys(decryptEnv(buildEnvEnc)).length && !config.buildKey) throw new InputError("Build variables need PLATFORM_BUILD_KEY on the server");
 };
 
-export const createProject = async (input) => {
+export const createProject = async (input, { guest = null } = {}) => {
   requireEngine();
-  const slug = checkPath(String(input.slug || "").toLowerCase(), SLUG, "subdomain");
+  let slug = String(input.slug || "").toLowerCase().trim();
+  if (guest) slug = `${slug.replace(/-guest$/, "").slice(0, 26)}${GUEST_LIMITS.suffix}`;
+  else if (slug.endsWith(GUEST_LIMITS.suffix)) throw new InputError("The -guest suffix is reserved for guest apps");
+  slug = checkPath(slug, SLUG, "subdomain");
   if (config.reservedSlugs.has(slug)) throw new InputError("That subdomain is reserved");
   if (projects.bySlug(slug)) throw new InputError("That subdomain is already used");
-  const memoryMb = numberIn(input.memoryMb ?? 256, 64, 2048, "Memory");
+  const memoryMb = numberIn(input.memoryMb ?? (guest ? 128 : 256), 64, guest ? GUEST_LIMITS.memoryMb : 2048, "Memory");
+  const cpus = numberIn(input.cpus ?? (guest ? 0.25 : 0.5), 0.1, guest ? GUEST_LIMITS.cpus : 2, "CPU");
+  if (guest && projects.forGuest(guest.id).length >= GUEST_LIMITS.projects) throw new InputError(`Guests can have at most ${GUEST_LIMITS.projects} projects`);
   checkBudget(memoryMb);
   const project = {
     id: newId(),
@@ -338,23 +346,27 @@ export const createProject = async (input) => {
     root_dir: checkPath(String(input.rootDir || "").trim().replace(/\/+$/, ""), ROOT, "root directory"),
     port: numberIn(input.port ?? 3000, 1, 65535, "Port"),
     memory_mb: memoryMb,
-    cpus: numberIn(input.cpus ?? 0.5, 0.1, 2, "CPU"),
+    cpus,
+    guest_id: guest?.id ?? null,
     env_enc: encryptEnv(mergeEnv({}, input.env)),
     build_env_enc: encryptEnv(mergeEnv({}, input.buildEnv, { build: true })),
     auto_deploy: input.autoDeploy === false ? 0 : 1,
   };
   requireBuildKey(project.build_env_enc);
+  if (guest && !(await isPublicRepo(project.repo))) throw new InputError("Guests can deploy public GitHub repositories only");
   projects.insert(project);
   const ref = await resolveHead(projects.get(project.id));
   const deploymentId = startDeployment(project.id, "create", { needsBuild: true, ref });
   return { project: describeProject(projects.get(project.id)), deploymentId };
 };
 
-export const updateProject = (id, input) => {
+export const updateProject = (id, input, { guest = null } = {}) => {
   requireEngine();
   const project = projects.get(id);
   if (!project) throw new InputError("Project not found");
   const fields = {};
+  const maxMemory = guest ? GUEST_LIMITS.memoryMb : 2048;
+  const maxCpus = guest ? GUEST_LIMITS.cpus : 2;
   if (input.branch !== undefined) fields.branch = checkPath(String(input.branch).trim(), BRANCH, "branch");
   if (input.autoDeploy !== undefined) fields.auto_deploy = input.autoDeploy ? 1 : 0;
   if (input.buildEnv !== undefined) {
@@ -365,9 +377,9 @@ export const updateProject = (id, input) => {
   if (fields.branch && fields.branch !== project.branch) fields.last_seen_sha = null;
   if (input.rootDir !== undefined) fields.root_dir = checkPath(String(input.rootDir).trim().replace(/\/+$/, ""), ROOT, "root directory");
   if (input.port !== undefined) fields.port = numberIn(input.port, 1, 65535, "Port");
-  if (input.cpus !== undefined) fields.cpus = numberIn(input.cpus, 0.1, 2, "CPU");
+  if (input.cpus !== undefined) fields.cpus = numberIn(input.cpus, 0.1, maxCpus, "CPU");
   if (input.memoryMb !== undefined) {
-    fields.memory_mb = numberIn(input.memoryMb, 64, 2048, "Memory");
+    fields.memory_mb = numberIn(input.memoryMb, 64, maxMemory, "Memory");
     checkBudget(fields.memory_mb, id);
   }
   if (input.env !== undefined) fields.env_enc = encryptEnv(mergeEnv(decryptEnv(project.env_enc), input.env));

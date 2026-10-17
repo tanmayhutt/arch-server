@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /console
+Disallow: /guest
 Disallow: /api/
 
 Sitemap: https://arch-server.tanmaytiwari.me/sitemap.xml

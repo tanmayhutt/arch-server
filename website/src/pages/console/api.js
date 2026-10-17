@@ -7,10 +7,10 @@ export class ApiError extends Error {
 
 // Cloudflare Access answers an expired session with a redirect to its login page.
 // Manual redirect handling surfaces that as a sign-in prompt instead of a network error.
-export const api = async (path, { method = "GET", body } = {}) => {
+export const request = async (url, { method = "GET", body } = {}) => {
   let response;
   try {
-    response = await fetch(`/api/platform${path}`, {
+    response = await fetch(url, {
       method,
       cache: "no-store",
       credentials: "same-origin",
@@ -26,6 +26,8 @@ export const api = async (path, { method = "GET", body } = {}) => {
   if (!response.ok || data.status !== "ok") throw new ApiError(data.status || "network", data.message);
   return data;
 };
+
+export const api = (path, options) => request(`/api/platform${path}`, options);
 
 export const formatAgo = (iso) => {
   if (!iso) return "";
