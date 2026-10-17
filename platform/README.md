@@ -9,6 +9,7 @@ A personal, single-owner deployment platform for the arch-server: push a reposit
 | 1. Inventory | Read-only console: every Compose project and container, resource usage, health, restarts, reachability, tunnel routes | Built |
 | 2. Engine | One-click deploy from the console: GitHub Actions builds, Caddy app router, `*.tanmaytiwari.me`, encrypted env vars, health-gated swap, rollback, stop/start, runtime logs | Built |
 | 3. Automation and hardening | Deploy on push (polling), encrypted build variables, private builder repo, restricted image-load key, app firewall | Built |
+| 3b. Public view and guests | Public `/apps` page, access requests, owner approval with one-time invite codes, guest portal at `/guest` with strict limits | Built |
 | 4. Data | Postgres, Redis, Mongo, volumes, nightly backups, workers, cron | Planned |
 | 5. Polish | Custom domains, metrics history, failure alerts | Planned |
 
@@ -49,6 +50,15 @@ Measured on 2026-10-17: a push was detected after 35 seconds and was live 4 minu
 - **Docker:** POST is allowed through the socket proxy, but the platform only stops or removes containers labelled `arch.platform.managed=true` and builds every container spec itself. Exec, secrets, swarm, and plugins stay blocked.
 - **Router admin:** bound to `10.217.83.2` on the internal `router-admin` network only.
 - **App firewall:** `arch-apps-firewall.service` confines `10.217.84.0/24` to the internet and its own network. Verified blocked: host SSH and Samba, tailnet tools, the LAN router, other Docker networks, the router admin API, and link-local metadata.
+
+## Public view and guest access
+
+- **`/apps` (public):** deployed apps, public sites, and coarse counts from `/api/public/overview`. Private tools appear only as a count; no paths, ports, hostnames, mounts, or the SSH route.
+- **Access requests:** `/api/public/requests` accepts name, email, optional public repository, and a message. Limits: Nginx 30 requests per minute per Cloudflare client address, platform 3 per hour per hashed address, 50 pending requests total, a honeypot field, same-origin JSON only. Only an HMAC of the client address is stored. Decided requests are deleted after 30 days.
+- **Approval:** the owner approves in the console, which shows a 16-character invite code once. The code is stored only as an HMAC bound to the email, expires after 7 days, works once, and is invalidated after 5 wrong attempts.
+- **Guest sign-in:** the "arch-server guests" Access application (`/guest`, `/api/guest`, policy Everyone, separate audience `CF_ACCESS_GUEST_AUD`) proves email ownership. The platform then requires an approved, activated guest record. Guest tokens can never satisfy owner routes.
+- **Guest limits:** own projects only, at most 2, 256 MiB and 0.5 CPU each, public repositories only (checked with the GitHub API), subdomains always end in `-guest`, and owners cannot use that suffix. Revoking a guest stops their apps immediately; "revoke and delete" removes them.
+- **Egress:** apps cannot send mail on port 25; authenticated submission (465, 587) is allowed.
 
 ## Host setup
 
