@@ -10,6 +10,7 @@ A personal, single-owner deployment platform for the arch-server: push a reposit
 | 2. Engine | One-click deploy from the console: GitHub Actions builds, Caddy app router, `*.tanmaytiwari.me`, encrypted env vars, health-gated swap, rollback, stop/start, runtime logs | Built |
 | 3. Automation and hardening | Deploy on push (polling), encrypted build variables, private builder repo, restricted image-load key, app firewall | Built |
 | 3b. Public view and guests | Public `/apps` page, access requests, owner approval with one-time invite codes, guest portal at `/guest` with strict limits | Built |
+| 3c. Easy deploy and scanning | Few-click deploy (repo picker or .zip upload), automatic port detection, plain static sites, ClamAV scanning of source and built app, owner approval for every untrusted guest deploy | Built |
 | 4. Data | Postgres, Redis, Mongo, volumes, nightly backups, workers, cron | Planned |
 | 5. Polish | Custom domains, metrics history, failure alerts | Planned |
 
@@ -59,6 +60,13 @@ Measured on 2026-10-17: a push was detected after 35 seconds and was live 4 minu
 - **Guest sign-in:** the "arch-server guests" Access application (`/guest`, `/api/guest`, policy Everyone, separate audience `CF_ACCESS_GUEST_AUD`) proves email ownership. The platform then requires an approved, activated guest record. Guest tokens can never satisfy owner routes.
 - **Guest limits:** own projects only, at most 2, 256 MiB and 0.5 CPU each, public repositories only (checked with the GitHub API), subdomains always end in `-guest`, and owners cannot use that suffix. Revoking a guest stops their apps immediately; "revoke and delete" removes them.
 - **Egress:** apps cannot send mail on port 25; authenticated submission (465, 587) is allowed.
+
+## Easy deploy and malware scanning
+
+- **Sources:** a GitHub repository (owner: searchable picker; guests: public `owner/name`) or a `.zip` up to 25 MB. Uploads are stored as parentless `uploads/<id>` branches in `arch-builder` (token needs Contents read and write there) and are never extracted on the server. The builder unpacks them with entry, size, ratio, path, link, and containment checks.
+- **Detection:** Dockerfile builds use it; plain `index.html` sites without a language manifest are served by Caddy on `$PORT` with `.git`, `.github`, and `.env*` excluded; everything else goes to Railpack. Port 0 means auto: the platform probes `PORT=3000`, the image's EXPOSE ports, then common framework ports, and routes to the first that answers.
+- **Scanning:** `clamav/clamav:1.5.4-debian` with a fresh signature update scans the source before the build and the image's working directory (including installed dependencies) after it. Malware signatures plus crypto-miner PUA signatures; broader PUA categories are off to avoid false positives on developer tools. Any detection fails the step and the deployment becomes `blocked`. Verified with the EICAR test file.
+- **Guest approval:** builds for untrusted guest projects start as `awaiting_approval` and do not use build minutes until the owner approves. Restarts and rollbacks reuse already-approved images. The owner can mark a guest project trusted; scanning still applies.
 
 ## Host setup
 
