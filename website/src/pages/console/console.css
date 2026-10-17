@@ -284,3 +284,18 @@
 .console-scan-threat { color: #a24b43; }
 .console-status.is-awaiting_approval { color: var(--amber); border-color: rgba(168,102,63,0.4); background: rgba(168,102,63,0.06); }
 .console-status.is-blocked, .console-status.is-denied { color: #a24b43; border-color: rgba(162,75,67,0.4); background: rgba(162,75,67,0.06); }
+
+.console-topbar-actions > a.console-button { text-decoration: none; }
+.console-overview strong.console-machine { font-size: 18px; }
+.console-actions-start { justify-content: flex-start; }
+.console-gate a.console-button { text-decoration: none; }
+
+.console-steps-plain { display: grid; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+.console-steps-plain strong { color: var(--text); }
+.console-steps-plain a, .console-empty .console-link { color: var(--ice-strong); text-decoration: underline; text-underline-offset: 3px; }
+.console-sheet .apps-request-form { padding: 0; border: 0; background: transparent; }
+
+.console-steps-plain { list-style: decimal; }
+.console-steps-plain li::marker { color: var(--subtle); font-weight: 600; }
+.console-routes small { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; white-space: nowrap; }
+@media (max-width: 600px) { .console-routes small { justify-content: flex-start; } }

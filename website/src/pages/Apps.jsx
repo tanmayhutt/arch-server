@@ -9,7 +9,7 @@ const since = (iso) => {
   return days >= 1 ? `live ${days}d` : "live today";
 };
 
-const RequestAccess = () => {
+export const RequestAccess = () => {
   const [form, setForm] = useState({ name: "", email: "", repo: "", message: "", website: "" });
   const [state, setState] = useState({ phase: "idle", error: "" });
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));

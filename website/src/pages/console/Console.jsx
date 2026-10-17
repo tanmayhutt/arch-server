@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Boxes, Cpu, Globe2, HardDrive, LockKeyhole, MemoryStick, Network, RefreshCw, Server, ShieldCheck } from "lucide-react";
 import AccessPanel from "./AccessPanel";
 import Projects from "./Projects";
+import PublicConsole from "./PublicConsole";
 import "./console.css";
 
 const REFRESH_MS = 15000;
@@ -107,7 +108,7 @@ const ServiceRow = ({ service, hostMemory }) => {
   );
 };
 
-const Console = () => {
+const OwnerConsole = () => {
   const [state, setState] = useState({ phase: "loading", data: null, error: null, at: null });
   const [session, setSession] = useState(null);
   const mountedRef = useRef(true);
@@ -251,6 +252,39 @@ const Console = () => {
       </main>
     </div>
   );
+};
+
+// Anyone can open /console. Owners are recognised by a working Access session on the API (which
+// stays protected); everyone else gets the read-only public view. /console/owner is the
+// Access-protected path that starts the owner login and then returns here.
+const Console = () => {
+  const [role, setRole] = useState("checking");
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  useLayoutEffect(() => {
+    document.title = "Console | arch-server";
+    document.head.querySelector('meta[name="robots"]')?.setAttribute("content", "noindex, nofollow");
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/platform/session", { cache: "no-store", credentials: "same-origin", redirect: "manual" })
+      .then(async (response) => {
+        if (!alive) return;
+        const body = response.type === "opaqueredirect" ? null : await response.json().catch(() => null);
+        setRole(response.ok && body?.status === "ok" ? "owner" : "public");
+      })
+      .catch(() => { if (alive) setRole("public"); });
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (role === "owner" && pathname !== "/console") navigate("/console", { replace: true });
+  }, [role, pathname, navigate]);
+
+  if (role === "checking") return <div className="console-shell" aria-busy="true" />;
+  return role === "owner" ? <OwnerConsole /> : <PublicConsole />;
 };
 
 export default Console;
