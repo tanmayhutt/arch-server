@@ -29,6 +29,23 @@ export const request = async (url, { method = "GET", body } = {}) => {
 
 export const api = (path, options) => request(`/api/platform${path}`, options);
 
+// Sends a .zip as the raw request body. The server checks size and signature; the archive is
+// unpacked and malware-scanned on a GitHub runner, never on the server.
+export const uploadArchive = async (base, file) => {
+  if (!file) throw new ApiError("invalid", "Choose a .zip file");
+  if (file.size > 25 * 1024 * 1024) throw new ApiError("invalid", "Archives are limited to 25 MB");
+  let response;
+  try {
+    response = await fetch(`${base}/uploads`, { method: "POST", body: file, headers: { "Content-Type": "application/zip" }, credentials: "same-origin", redirect: "manual", cache: "no-store" });
+  } catch {
+    throw new ApiError("network", "Upload failed. Check your connection and try again.");
+  }
+  if (response.type === "opaqueredirect") throw new ApiError("access_required", "Your sign-in expired. Reload the page.");
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.status !== "ok") throw new ApiError(data.status || "network", data.message || "Upload failed");
+  return data;
+};
+
 export const formatAgo = (iso) => {
   if (!iso) return "";
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);

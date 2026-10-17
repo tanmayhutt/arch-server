@@ -53,7 +53,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 160M
+          memory: 256M
           cpus: '0.25'
 
   # Routes *.tanmaytiwari.me to deployed app containers. Its configuration is pushed by the

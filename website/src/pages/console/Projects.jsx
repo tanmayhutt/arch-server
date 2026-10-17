@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, CircleStop, ExternalLink, GitBranch, History, Play, Plus, RotateCcw, ScrollText, Settings2, Trash2, X } from "lucide-react";
-import { activeStatuses, formatAgo, request } from "./api";
+import { ArrowUpRight, Check, ChevronDown, CircleStop, ExternalLink, FileArchive, GitBranch, History, Play, Plus, RotateCcw, ScrollText, Search, Settings2, ShieldAlert, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import { activeStatuses, formatAgo, request, uploadArchive } from "./api";
 
 // The same interface serves the owner (/api/platform) and approved guests (/api/guest).
 // The server enforces every guest restriction; the mode only adjusts what the form offers.
@@ -9,12 +9,16 @@ const useApi = () => {
   const { base } = useContext(ApiContext);
   return useCallback((path, options) => request(`${base}${path}`, options), [base]);
 };
+const useBase = () => useContext(ApiContext).base;
 const useMode = () => useContext(ApiContext).mode;
 
 const statusCopy = {
   queued: "Queued", building: "Building", deploying: "Deploying", live: "Live", failed: "Failed",
   superseded: "Previous", stopped: "Stopped", cancelled: "Cancelled",
+  awaiting_approval: "Awaiting approval", denied: "Denied", blocked: "Blocked",
 };
+
+const slugFrom = (value) => value.toLowerCase().replace(/\.zip$/, "").replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "").replace(/^[^a-z]+/, "").slice(0, 26);
 
 const parseEnv = (text) => {
   const env = {};
@@ -89,70 +93,137 @@ const toggleIn = (setter) => (key) => setter((current) => {
   return next;
 });
 
+// Few-click deploy: pick a repository or drop a .zip, confirm the name, deploy. Everything else
+// (branch, folder, port, memory, variables) has a sensible default under Advanced options.
 const NewProject = ({ appDomain, onCreated, onClose }) => {
   const api = useApi();
+  const base = useBase();
   const mode = useMode();
+  const [source, setSource] = useState("github");
   const [repos, setRepos] = useState([]);
-  const [form, setForm] = useState({ repo: "", branch: "main", slug: "", port: "3000", memoryMb: mode === "guest" ? "128" : "256", rootDir: "", env: "", buildEnv: "", autoDeploy: true });
-  const hostname = form.slug ? `${mode === "guest" ? `${form.slug.replace(/-guest$/, "")}-guest` : form.slug}.${appDomain}` : "";
-  const [state, setState] = useState({ busy: false, error: "" });
+  const [query, setQuery] = useState("");
+  const [file, setFile] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  const [form, setForm] = useState({ repo: "", branch: "", slug: "", port: "", memoryMb: mode === "guest" ? "128" : "256", rootDir: "", env: "", buildEnv: "", autoDeploy: true });
+  const [state, setState] = useState({ busy: "", error: "" });
   const slugTouched = useRef(false);
+  const fileInput = useRef(null);
 
   useEffect(() => { if (mode === "owner") api("/repos").then((data) => setRepos(data.repos)).catch(() => {}); }, [api, mode]);
 
-  const update = (key, value) => setForm((current) => {
-    const next = { ...current, [key]: value };
-    if (key === "repo") {
-      const match = repos.find((repo) => repo.fullName.toLowerCase() === value.toLowerCase());
-      if (match) next.branch = match.defaultBranch;
-      if (!slugTouched.current) next.slug = (value.split("/")[1] || "").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
-    }
-    return next;
-  });
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const pickRepo = (repo) => {
+    setForm((current) => ({ ...current, repo: repo.fullName, branch: repo.defaultBranch || "main", slug: slugTouched.current ? current.slug : slugFrom(repo.fullName.split("/")[1]) }));
+  };
+  const pickFile = (picked) => {
+    if (!picked) return;
+    setFile(picked);
+    if (!slugTouched.current) update("slug", slugFrom(picked.name));
+  };
+  const hostname = form.slug ? `${mode === "guest" ? `${form.slug.replace(/-guest$/, "")}-guest` : form.slug}.${appDomain}` : "";
+  const filtered = repos.filter((repo) => repo.fullName.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+  const ready = form.slug && (source === "upload" ? file : form.repo);
 
   const submit = async (event) => {
     event.preventDefault();
-    setState({ busy: true, error: "" });
+    setState({ busy: "Starting", error: "" });
     try {
-      const data = await api("/projects", {
-        method: "POST",
-        body: { repo: form.repo.trim(), branch: form.branch.trim(), slug: form.slug.trim(), port: Number(form.port), memoryMb: Number(form.memoryMb), rootDir: form.rootDir.trim(), env: parseEnv(form.env), buildEnv: parseEnv(form.buildEnv), autoDeploy: form.autoDeploy },
-      });
+      const body = { slug: form.slug.trim(), port: form.port ? Number(form.port) : 0, memoryMb: Number(form.memoryMb), rootDir: form.rootDir.trim(), env: parseEnv(form.env), buildEnv: parseEnv(form.buildEnv) };
+      if (source === "upload") {
+        setState({ busy: "Uploading", error: "" });
+        const { uploadRef } = await uploadArchive(base, file);
+        Object.assign(body, { source: "upload", uploadRef });
+        setState({ busy: "Starting", error: "" });
+      } else {
+        Object.assign(body, { repo: form.repo.trim(), branch: form.branch.trim() || "main", autoDeploy: form.autoDeploy });
+      }
+      const data = await api("/projects", { method: "POST", body });
       onCreated(data.deploymentId);
     } catch (error) {
-      setState({ busy: false, error: error.message });
+      setState({ busy: "", error: error.message });
     }
   };
 
   return (
-    <Sheet title="New project" onClose={onClose}>
+    <Sheet title="Deploy a project" onClose={onClose}>
       <form className="console-form" onSubmit={submit}>
-        <Field label="GitHub repository" hint={mode === "guest" ? "owner/name of a public GitHub repository." : "owner/name. Public repositories are suggested; private ones work when the builder token can read them."}>
-          <input required list="console-repos" value={form.repo} onChange={(event) => update("repo", event.target.value)} placeholder="tanmayhutt/my-app" autoComplete="off" spellCheck="false" />
-          <datalist id="console-repos">{repos.map((repo) => <option key={repo.fullName} value={repo.fullName}>{repo.language || ""}</option>)}</datalist>
-        </Field>
-        <div className="console-form-row">
-          <Field label="Branch"><input required value={form.branch} onChange={(event) => update("branch", event.target.value)} spellCheck="false" /></Field>
-          <Field label="Root directory" hint="Leave empty for the repository root."><input value={form.rootDir} onChange={(event) => update("rootDir", event.target.value)} placeholder="apps/web" spellCheck="false" /></Field>
+        <div className="console-tabs" role="tablist" aria-label="Source">
+          <button type="button" role="tab" aria-selected={source === "github"} className={source === "github" ? "is-active" : ""} onClick={() => setSource("github")}><GitBranch size={14} />GitHub</button>
+          <button type="button" role="tab" aria-selected={source === "upload"} className={source === "upload" ? "is-active" : ""} onClick={() => setSource("upload")}><Upload size={14} />Upload a .zip</button>
         </div>
-        <Field label="Subdomain" hint={hostname ? `https://${hostname}` : "Lowercase letters, numbers, and hyphens."}>
+
+        {source === "github" && (mode === "owner" && repos.length ? (
+          <div className="console-repo-picker">
+            <label className="console-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your repositories" aria-label="Search repositories" /></label>
+            <ul>
+              {filtered.map((repo) => (
+                <li key={repo.fullName}>
+                  <button type="button" className={form.repo === repo.fullName ? "is-selected" : ""} onClick={() => pickRepo(repo)} aria-pressed={form.repo === repo.fullName}>
+                    <span><strong>{repo.fullName.split("/")[1]}</strong><small>{repo.language || "Repository"} · updated {formatAgo(repo.pushedAt)}</small></span>
+                    {form.repo === repo.fullName && <Check size={15} />}
+                  </button>
+                </li>
+              ))}
+              {!filtered.length && <li className="console-muted">No match. Private repositories can be typed under Advanced options.</li>}
+            </ul>
+          </div>
+        ) : (
+          <Field label="GitHub repository" hint={mode === "guest" ? "A public repository, as owner/name." : "owner/name"}>
+            <input required value={form.repo} onChange={(event) => { update("repo", event.target.value); if (!slugTouched.current) update("slug", slugFrom(event.target.value.split("/")[1] || "")); }} placeholder="owner/name" autoComplete="off" spellCheck="false" />
+          </Field>
+        ))}
+
+        {source === "upload" && (
+          <div
+            className={`console-dropzone${dragging ? " is-dragging" : ""}${file ? " has-file" : ""}`}
+            onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => { event.preventDefault(); setDragging(false); pickFile(event.dataTransfer.files?.[0]); }}
+          >
+            <FileArchive size={22} />
+            {file ? <p><strong>{file.name}</strong> · {(file.size / 1024 / 1024).toFixed(1)} MB</p> : <p><strong>Drop a .zip here</strong> or choose a file</p>}
+            <small>A website folder or project source, up to 25 MB. It is scanned for malware before it can run.</small>
+            <button type="button" className="console-button" onClick={() => fileInput.current?.click()}>{file ? "Choose another" : "Choose file"}</button>
+            <input ref={fileInput} type="file" accept=".zip,application/zip" hidden onChange={(event) => pickFile(event.target.files?.[0])} />
+          </div>
+        )}
+
+        <Field label="Name" hint={hostname ? `Live at https://${hostname}` : "Lowercase letters, numbers, and hyphens."}>
           <input required value={form.slug} onChange={(event) => { slugTouched.current = true; update("slug", event.target.value.toLowerCase()); }} pattern="[a-z][a-z0-9\-]{1,30}[a-z0-9]" spellCheck="false" />
         </Field>
-        <div className="console-form-row">
-          <Field label="Port" hint="The app must listen on this port. PORT is set for you."><input required type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} /></Field>
-          <Field label="Memory (MiB)" hint={mode === "guest" ? "Hard limit, up to 256." : "Hard limit. 256 suits most small apps."}><input required type="number" min="64" max={mode === "guest" ? 256 : 2048} step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
-        </div>
-        <Field label="Runtime variables" hint="Available while the app runs. One KEY=VALUE per line. Stored encrypted and never shown again.">
-          <textarea rows={3} value={form.env} onChange={(event) => update("env", event.target.value)} placeholder={"DATABASE_URL=...\nAPI_KEY=..."} spellCheck="false" />
-        </Field>
-        <Field label="Build variables" hint="Available only while building, for values like VITE_API_URL or NEXT_PUBLIC_*. Anything a frontend reads at build time ends up in its public files.">
-          <textarea rows={2} value={form.buildEnv} onChange={(event) => update("buildEnv", event.target.value)} placeholder="VITE_API_URL=https://api.example.com" spellCheck="false" />
-        </Field>
-        <Toggle label="Deploy on push" hint="Checks the branch every 45 seconds and deploys new commits." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />
+
+        <button type="button" className="console-disclosure" aria-expanded={advanced} onClick={() => setAdvanced((value) => !value)}>
+          <ChevronDown size={14} />Advanced options
+        </button>
+        {advanced && (
+          <div className="console-advanced">
+            {source === "github" && mode === "owner" && repos.length > 0 && (
+              <Field label="Repository" hint="Type owner/name to use a private repository."><input value={form.repo} onChange={(event) => update("repo", event.target.value)} spellCheck="false" /></Field>
+            )}
+            <div className="console-form-row">
+              {source === "github" && <Field label="Branch"><input value={form.branch} onChange={(event) => update("branch", event.target.value)} placeholder="main" spellCheck="false" /></Field>}
+              <Field label="App folder" hint="Leave empty for the root."><input value={form.rootDir} onChange={(event) => update("rootDir", event.target.value)} placeholder="apps/web" spellCheck="false" /></Field>
+            </div>
+            <div className="console-form-row">
+              <Field label="Port" hint="Leave empty to detect it automatically."><input type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} placeholder="Auto" /></Field>
+              <Field label="Memory (MiB)" hint={mode === "guest" ? "Up to 256." : "Hard limit."}><input type="number" min="64" max={mode === "guest" ? 256 : 2048} step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
+            </div>
+            <Field label="Runtime variables" hint="KEY=VALUE per line. Encrypted and never shown again.">
+              <textarea rows={3} value={form.env} onChange={(event) => update("env", event.target.value)} placeholder={"DATABASE_URL=...\nAPI_KEY=..."} spellCheck="false" />
+            </Field>
+            <Field label="Build variables" hint="Only during the build, for values like VITE_API_URL. Values a frontend reads at build time become public.">
+              <textarea rows={2} value={form.buildEnv} onChange={(event) => update("buildEnv", event.target.value)} spellCheck="false" />
+            </Field>
+            {source === "github" && <Toggle label="Deploy on push" hint="New commits on the branch deploy automatically." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />}
+          </div>
+        )}
+
+        {mode === "guest" && <p className="console-form-note-muted">Each deploy waits for the owner to approve it, then it is built and scanned for malware before it can run.</p>}
         <FormError message={state.error} />
         <div className="console-form-actions">
           <button type="button" className="console-button" onClick={onClose}>Cancel</button>
-          <button type="submit" className="console-button is-primary" disabled={state.busy}><Play size={14} />{state.busy ? "Starting" : "Deploy"}</button>
+          <button type="submit" className="console-button is-primary" disabled={!ready || Boolean(state.busy)}><Play size={14} />{state.busy || "Deploy"}</button>
         </div>
       </form>
     </Sheet>
@@ -162,7 +233,7 @@ const NewProject = ({ appDomain, onCreated, onClose }) => {
 const ProjectSettings = ({ project, onSaved, onClose }) => {
   const api = useApi();
   const mode = useMode();
-  const [form, setForm] = useState({ branch: project.branch, rootDir: project.rootDir, port: String(project.port), memoryMb: String(project.memoryMb), cpus: String(project.cpus), env: "", buildEnv: "", autoDeploy: project.autoDeploy });
+  const [form, setForm] = useState({ branch: project.branch, rootDir: project.rootDir, port: project.port ? String(project.port) : "", memoryMb: String(project.memoryMb), cpus: String(project.cpus), env: "", buildEnv: "", autoDeploy: project.autoDeploy, trusted: project.trusted });
   const [removed, setRemoved] = useState(new Set());
   const [removedBuild, setRemovedBuild] = useState(new Set());
   const [state, setState] = useState({ busy: false, error: "", saved: false });
@@ -178,7 +249,11 @@ const ProjectSettings = ({ project, onSaved, onClose }) => {
       for (const key of removedBuild) buildEnv[key] = null;
       await api(`/projects/${project.id}`, {
         method: "PATCH",
-        body: { branch: form.branch, rootDir: form.rootDir, port: Number(form.port), memoryMb: Number(form.memoryMb), cpus: Number(form.cpus), env, buildEnv, autoDeploy: form.autoDeploy },
+        body: {
+          ...(project.sourceType === "upload" ? {} : { branch: form.branch, autoDeploy: form.autoDeploy }),
+          rootDir: form.rootDir, port: form.port ? Number(form.port) : 0, memoryMb: Number(form.memoryMb), cpus: Number(form.cpus), env, buildEnv,
+          ...(mode === "owner" && project.guestEmail ? { trusted: form.trusted } : {}),
+        },
       });
       setState({ busy: false, error: "", saved: true });
       setForm((current) => ({ ...current, env: "", buildEnv: "" }));
@@ -194,15 +269,16 @@ const ProjectSettings = ({ project, onSaved, onClose }) => {
     <Sheet title={`${project.slug} settings`} onClose={onClose}>
       <form className="console-form" onSubmit={submit}>
         <div className="console-form-row">
-          <Field label="Branch"><input required value={form.branch} onChange={(event) => update("branch", event.target.value)} spellCheck="false" /></Field>
-          <Field label="Root directory"><input value={form.rootDir} onChange={(event) => update("rootDir", event.target.value)} spellCheck="false" /></Field>
+          {project.sourceType !== "upload" && <Field label="Branch"><input required value={form.branch} onChange={(event) => update("branch", event.target.value)} spellCheck="false" /></Field>}
+          <Field label="App folder"><input value={form.rootDir} onChange={(event) => update("rootDir", event.target.value)} spellCheck="false" /></Field>
         </div>
         <div className="console-form-row is-three">
-          <Field label="Port"><input type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} /></Field>
+          <Field label="Port"><input type="number" min="1" max="65535" value={form.port} onChange={(event) => update("port", event.target.value)} placeholder="Auto" /></Field>
           <Field label="Memory (MiB)"><input type="number" min="64" max={mode === "guest" ? 256 : 2048} step="32" value={form.memoryMb} onChange={(event) => update("memoryMb", event.target.value)} /></Field>
           <Field label="CPU"><input type="number" min="0.1" max={mode === "guest" ? 0.5 : 2} step="0.1" value={form.cpus} onChange={(event) => update("cpus", event.target.value)} /></Field>
         </div>
-        <Toggle label="Deploy on push" hint="Checks the branch every 45 seconds and deploys new commits." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />
+        {project.sourceType !== "upload" && <Toggle label="Deploy on push" hint="Checks the branch every 45 seconds and deploys new commits." checked={form.autoDeploy} onChange={(value) => update("autoDeploy", value)} />}
+        {mode === "owner" && project.guestEmail && <Toggle label="Trust this guest project" hint="Its deploys run without waiting for your approval. Malware scanning still applies." checked={form.trusted} onChange={(value) => update("trusted", value)} />}
         <KeyList label="Runtime variables" keys={project.envKeys} removed={removed} onToggle={toggleIn(setRemoved)} />
         <Field label="Add or replace runtime variables" hint="KEY=VALUE per line. A key that already exists is overwritten.">
           <textarea rows={2} value={form.env} onChange={(event) => update("env", event.target.value)} spellCheck="false" />
@@ -336,14 +412,17 @@ const DeleteProject = ({ project, onDeleted, onClose }) => {
 
 const projectState = (project) => {
   const latest = project.deployments[0];
-  if (latest && activeStatuses.has(latest.status)) return latest.status;
+  if (latest && (activeStatuses.has(latest.status) || latest.status === "awaiting_approval")) return latest.status;
   if (project.status === "stopped") return "stopped";
   if (project.liveDeploymentId) return "live";
   return latest?.status === "failed" ? "failed" : "queued";
 };
 
-const ProjectCard = ({ project, open, run }) => {
+const ProjectCard = ({ project, open, run, uploadVersion }) => {
+  const mode = useMode();
   const [showHistory, setShowHistory] = useState(false);
+  const versionInput = useRef(null);
+  const awaiting = project.deployments.find((item) => item.status === "awaiting_approval");
   const state = projectState(project);
   const live = project.deployments.find((item) => item.id === project.liveDeploymentId);
   const busy = activeStatuses.has(state);
@@ -356,16 +435,42 @@ const ProjectCard = ({ project, open, run }) => {
           {state === "live" && <a className="console-link" href={project.url} target="_blank" rel="noreferrer">{project.url.replace("https://", "")}<ExternalLink size={12} /></a>}
         </div>
         <p className="console-project-meta">
-          <span><GitBranch size={12} /> {project.repo} · {project.branch}{project.rootDir ? ` · ${project.rootDir}` : ""}</span>
+          {project.sourceType !== "upload" && <span><GitBranch size={12} /> {project.repo} · {project.branch}{project.rootDir ? ` · ${project.rootDir}` : ""}</span>}
           {live?.commit && <code>{live.commit.slice(0, 7)}</code>}
           {project.deployments[0] && <span>{formatAgo(project.deployments[0].createdAt)}</span>}
           <span>{project.memoryMb} MiB · {project.cpus} CPU · port {project.port}</span>
           <span>{project.autoDeploy ? "Deploys on push" : "Manual deploys"}</span>
           {project.guestEmail && <span className="console-guest-tag">Guest: {project.guestEmail}</span>}
+          {project.sourceType === "upload" && <span><FileArchive size={12} /> Uploaded files</span>}
+          {live?.scan === "clean" && <span className="console-scan-clean"><ShieldCheck size={12} /> Scanned clean</span>}
+          {project.deployments[0]?.status === "blocked" && <span className="console-scan-threat"><ShieldAlert size={12} /> Last build blocked by the malware scan</span>}
         </p>
       </div>
+      {awaiting && (
+        <div className="console-approval" role="status">
+          {mode === "owner" ? (
+            <>
+              <span><ShieldAlert size={14} /> A guest deploy is waiting for your approval{awaiting.ref ? ` (commit ${awaiting.ref.slice(0, 7)})` : ""}.</span>
+              <button type="button" className="console-button is-primary is-small" onClick={() => run(`/deployments/${awaiting.id}/approve`)}><Check size={12} />Approve deploy</button>
+              <button type="button" className="console-button is-small" onClick={() => run(`/deployments/${awaiting.id}/deny`)}>Deny</button>
+            </>
+          ) : (
+            <>
+              <span><ShieldAlert size={14} /> Waiting for the owner to approve this deploy.</span>
+              <button type="button" className="console-button is-small" onClick={() => run(`/deployments/${awaiting.id}/cancel`)}>Cancel</button>
+            </>
+          )}
+        </div>
+      )}
       <div className="console-project-actions">
-        <button type="button" className="console-button is-primary" onClick={() => run(`/projects/${project.id}/deploy`)} disabled={busy}><Play size={13} />{busy ? "Working" : "Deploy"}</button>
+        {project.sourceType === "upload" ? (
+          <>
+            <button type="button" className="console-button is-primary" onClick={() => versionInput.current?.click()} disabled={busy}><Upload size={13} />{busy ? "Working" : "Upload new version"}</button>
+            <input ref={versionInput} type="file" accept=".zip,application/zip" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) uploadVersion(project, file); }} />
+          </>
+        ) : (
+          <button type="button" className="console-button is-primary" onClick={() => run(`/projects/${project.id}/deploy`)} disabled={busy || Boolean(awaiting)}><Play size={13} />{busy ? "Working" : "Deploy"}</button>
+        )}
         {busy && project.deployments[0] && <button type="button" className="console-button" onClick={() => open({ type: "deployment", id: project.deployments[0].id })}>View progress</button>}
         {state === "stopped"
           ? <button type="button" className="console-button" onClick={() => run(`/projects/${project.id}/start`)}><Play size={13} />Start</button>
@@ -428,6 +533,18 @@ const ProjectsPanel = () => {
     }
   };
 
+  const base = useBase();
+  const uploadVersion = async (project, file) => {
+    setError("");
+    try {
+      const { uploadRef } = await uploadArchive(base, file);
+      await api(`/projects/${project.id}`, { method: "PATCH", body: { uploadRef } });
+      await run(`/projects/${project.id}/deploy`);
+    } catch (uploadError) {
+      setError(uploadError.message);
+    }
+  };
+
   const close = () => setModal(null);
 
   return (
@@ -448,7 +565,7 @@ const ProjectsPanel = () => {
         </div>
       )}
       {data?.projects.length > 0 && (
-        <ul className="console-projects">{data.projects.map((project) => <ProjectCard key={project.id} project={project} open={setModal} run={run} />)}</ul>
+        <ul className="console-projects">{data.projects.map((project) => <ProjectCard key={project.id} project={project} open={setModal} run={run} uploadVersion={uploadVersion} />)}</ul>
       )}
 
       {modal?.type === "new" && <NewProject appDomain={data.appDomain} onClose={close} onCreated={(id) => { load(); setModal({ type: "deployment", id }); }} />}

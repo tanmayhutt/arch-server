@@ -36,6 +36,11 @@ on:
         required: false
         type: string
         default: ''
+      source_upload:
+        description: Branch in this repository holding an uploaded source.zip
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -55,7 +60,9 @@ jobs:
       SOURCE_REF: ${{ inputs.ref }}
       ROOT_DIR: ${{ inputs.root_dir }}
       IMAGE: ${{ inputs.image }}
+      SOURCE_UPLOAD: ${{ inputs.source_upload }}
       RAILPACK_VERSION: v0.40.1
+      CLAMAV_IMAGE: clamav/clamav:1.5.4-debian
 
     steps:
       - name: Validate inputs
@@ -68,6 +75,7 @@ jobs:
           [[ "$ROOT_DIR" =~ ^[A-Za-z0-9._/-]{0,200}$ && "$ROOT_DIR" != *..* && "$ROOT_DIR" != /* ]] || fail "invalid root directory"
           [[ "$IMAGE" =~ ^arch-apps/[a-z0-9-]+:[a-f0-9]{16}$ ]] || fail "invalid image name"
           [[ "${IMAGE##*:}" == "$DEPLOYMENT_ID" ]] || fail "image tag must match the deployment id"
+          [[ -z "$SOURCE_UPLOAD" || "$SOURCE_UPLOAD" =~ ^uploads/[a-f0-9]{16}$ ]] || fail "invalid upload reference"
           echo "CACHE_SCOPE=${IMAGE%%:*}" | tr '/' '-' >> "$GITHUB_ENV"
 
       - name: Decrypt build variables
@@ -104,6 +112,7 @@ jobs:
           NODE
 
       - name: Check out source
+        if: inputs.source_upload == ''
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repository }}
@@ -111,6 +120,61 @@ jobs:
           token: ${{ secrets.BUILDER_REPO_TOKEN || github.token }}
           path: source
           persist-credentials: false
+
+      - name: Fetch uploaded archive
+        if: inputs.source_upload != ''
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_upload }}
+          path: upload
+          persist-credentials: false
+
+      # Extracts with strict limits: no absolute paths, no "..", no links or devices, at most
+      # 20,000 entries and 300 MB uncompressed, and a bounded compression ratio.
+      - name: Unpack uploaded archive
+        if: inputs.source_upload != ''
+        run: |
+          python3 - "$GITHUB_WORKSPACE/upload/source.zip" "$GITHUB_WORKSPACE/source" <<'PY'
+          import os, stat, sys, zipfile
+          archive, target = sys.argv[1], sys.argv[2]
+          size = os.path.getsize(archive)
+          with zipfile.ZipFile(archive) as z:
+              entries = z.infolist()
+              if len(entries) > 20000: sys.exit("::error::archive has too many files")
+              total = sum(e.file_size for e in entries)
+              if total > 300 * 1024 * 1024: sys.exit("::error::archive expands beyond 300 MB")
+              if size and total / size > 200: sys.exit("::error::archive compression ratio is suspicious")
+              names = [e.filename for e in entries if not e.is_dir()]
+              # A single top-level folder is unwrapped so the project root is the archive content.
+              tops = {n.split("/", 1)[0] for n in names}
+              strip = len(tops) == 1 and all("/" in n for n in names)
+              os.makedirs(target, exist_ok=True)
+              for e in entries:
+                  name = e.filename.split("/", 1)[1] if strip and "/" in e.filename else e.filename
+                  mode = (e.external_attr >> 16) & 0o170000
+                  if not name or e.is_dir(): continue
+                  if name.startswith("/") or "\\" in name or ".." in name.split("/") or mode in (stat.S_IFLNK, stat.S_IFCHR, stat.S_IFBLK, stat.S_IFIFO):
+                      sys.exit(f"::error::unsafe archive entry: {name[:80]}")
+                  path = os.path.join(target, name)
+                  if not os.path.realpath(path).startswith(os.path.realpath(target) + os.sep):
+                      sys.exit(f"::error::archive entry escapes the project folder: {name[:80]}")
+                  os.makedirs(os.path.dirname(path), exist_ok=True)
+                  with z.open(e) as src, open(path, "wb") as dst:
+                      dst.write(src.read())
+              print(f"Unpacked {len(names)} files ({total} bytes)")
+          PY
+          sha=$(sha256sum "$GITHUB_WORKSPACE/upload/source.zip" | cut -c1-12)
+          echo "UPLOAD_SHA=$sha" >> "$GITHUB_ENV"
+
+      - name: Scan source for malware
+        run: |
+          set -o pipefail
+          docker volume create clamdb >/dev/null
+          docker run --rm -v clamdb:/var/lib/clamav -v "$GITHUB_WORKSPACE/source:/scan:ro" \
+            --entrypoint sh "$CLAMAV_IMAGE" -c '
+              freshclam --stdout --quiet >/dev/null 2>&1 || echo "Signature update skipped; using bundled signatures"
+              clamscan --recursive --infected --detect-pua=yes --include-pua=Coin \
+                --max-filesize=100M --max-scansize=500M --alert-exceeds-max=no --stdout /scan'
 
       - name: Plan the build
         id: plan
@@ -120,7 +184,7 @@ jobs:
           SECRETS_DIR="$RUNNER_TEMP/build-secrets"
           [ -d "$APP_DIR" ] || { echo "::error::root directory not found"; exit 1; }
           echo "context=$APP_DIR" >> "$GITHUB_OUTPUT"
-          echo "commit=$(git -C "$GITHUB_WORKSPACE/source" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -n "$SOURCE_UPLOAD" ]; then echo "commit=upload-${UPLOAD_SHA}" >> "$GITHUB_OUTPUT"; else echo "commit=$(git -C "$GITHUB_WORKSPACE/source" rev-parse HEAD)" >> "$GITHUB_OUTPUT"; fi
 
           # Every build variable is offered as a BuildKit secret file.
           delimiter="EOF_$(openssl rand -hex 8)"
@@ -145,6 +209,19 @@ jobs:
               fi
               echo "$delimiter"
             } >> "$GITHUB_OUTPUT"
+          elif [ -f "$APP_DIR/index.html" ] && ! ls "$APP_DIR"/{package.json,requirements.txt,pyproject.toml,go.mod,Cargo.toml,Gemfile,composer.json,pom.xml,build.gradle,deno.json} >/dev/null 2>&1; then
+            echo "Plain static site, serving it with Caddy"
+            # Never publish repository metadata or local secrets with the site.
+            printf '%s\n' .git .github .env '.env.*' node_modules >> "$APP_DIR/.dockerignore"
+            cat > "$RUNNER_TEMP/Dockerfile.static" <<'DOCKERFILE'
+          FROM caddy:2.11.4-alpine
+          COPY . /srv
+          RUN printf ':{$PORT:3000} {\n\troot * /srv\n\tencode gzip\n\ttry_files {path} {path}/ {path}.html\n\tfile_server\n}\n' > /etc/caddy/Caddyfile
+          EXPOSE 3000
+          DOCKERFILE
+            echo "file=$RUNNER_TEMP/Dockerfile.static" >> "$GITHUB_OUTPUT"
+            echo "syntax=" >> "$GITHUB_OUTPUT"
+            printf 'dockerargs<<%s\n%s\n' "$delimiter" "$delimiter" >> "$GITHUB_OUTPUT"
           else
             echo "No Dockerfile, detecting the framework with Railpack $RAILPACK_VERSION"
             # Railpack uses /tmp/railpack as its cache directory, so the binary lives elsewhere.
@@ -194,6 +271,23 @@ jobs:
       - name: Remove build variables
         if: always()
         run: rm -rf "$RUNNER_TEMP/build-secrets"
+
+      # Dependencies installed during the build are scanned too: the app's working directory is
+      # copied out of the image and checked with the same scanner.
+      - name: Scan built app for malware
+        run: |
+          set -o pipefail
+          workdir=$(docker image inspect -f '{{.Config.WorkingDir}}' "$IMAGE")
+          [ -n "$workdir" ] && [ "$workdir" != "/" ] || workdir=/
+          cid=$(docker create "$IMAGE")
+          mkdir -p "$RUNNER_TEMP/image-app"
+          if [ "$workdir" = "/" ]; then docker export "$cid" | tar -x -C "$RUNNER_TEMP/image-app" --exclude=proc --exclude=sys --exclude=dev; else docker cp "$cid:$workdir/." "$RUNNER_TEMP/image-app"; fi
+          docker rm "$cid" >/dev/null
+          echo "Scanning $workdir from the built image"
+          docker run --rm -v clamdb:/var/lib/clamav -v "$RUNNER_TEMP/image-app:/scan:ro" \
+            --entrypoint clamscan "$CLAMAV_IMAGE" --recursive --infected --detect-pua=yes --include-pua=Coin \
+            --max-filesize=100M --max-scansize=500M --alert-exceeds-max=no --stdout /scan
+          rm -rf "$RUNNER_TEMP/image-app"
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4

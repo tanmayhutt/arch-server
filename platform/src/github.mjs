@@ -1,6 +1,6 @@
 import { config } from "./config.mjs";
 
-const api = async (path, { method = "GET", body, auth = true } = {}) => {
+const api = async (path, { method = "GET", body, auth = true, timeoutMs = 15000 } = {}) => {
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -9,7 +9,7 @@ const api = async (path, { method = "GET", body, auth = true } = {}) => {
   if (auth) headers.Authorization = `Bearer ${config.github.token}`;
   if (body) headers["Content-Type"] = "application/json";
   const response = await fetch(`https://api.github.com${path}`, {
-    method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000),
+    method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}));
@@ -23,12 +23,12 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Starts the shared builder workflow. Newer API versions return the run id directly;
 // otherwise the run is found by its unique run-name.
-export const dispatchBuild = async ({ deploymentId, repo, ref, rootDir, image, buildEnv = "" }) => {
+export const dispatchBuild = async ({ deploymentId, repo, ref, rootDir, image, buildEnv = "", sourceUpload = "" }) => {
   const result = await api(`${builder()}/actions/workflows/${config.github.builderWorkflow}/dispatches`, {
     method: "POST",
     body: {
       ref: config.github.builderRef,
-      inputs: { deployment_id: deploymentId, repository: repo, ref, root_dir: rootDir, image, build_env: buildEnv },
+      inputs: { deployment_id: deploymentId, repository: repo, ref, root_dir: rootDir, image, build_env: buildEnv, source_upload: sourceUpload },
       return_run_details: true,
     },
   });
@@ -97,3 +97,19 @@ export const isPublicRepo = async (repo) => {
     return false;
   }
 };
+
+// Uploaded archives are stored as a parentless branch in the private builder repository. They are
+// extracted and scanned only on GitHub's runners, never on the server.
+export const storeUpload = async (uploadId, buffer) => {
+  const repo = builder();
+  const blob = await api(`${repo}/git/blobs`, { method: "POST", body: { content: buffer.toString("base64"), encoding: "base64" }, timeoutMs: 120000 });
+  const tree = await api(`${repo}/git/trees`, { method: "POST", body: { tree: [{ path: "source.zip", mode: "100644", type: "blob", sha: blob.sha }] } });
+  const commit = await api(`${repo}/git/commits`, { method: "POST", body: { message: `upload ${uploadId}`, tree: tree.sha, parents: [] } });
+  const ref = `uploads/${uploadId}`;
+  await api(`${repo}/git/refs`, { method: "POST", body: { ref: `refs/heads/${ref}`, sha: commit.sha } });
+  return ref;
+};
+
+export const deleteUpload = (ref) => (/^uploads\/[a-f0-9]{16}$/.test(ref || "")
+  ? api(`${builder()}/git/refs/heads/${ref}`, { method: "DELETE" }).catch(() => null)
+  : Promise.resolve(null));

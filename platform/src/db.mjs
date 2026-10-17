@@ -53,6 +53,11 @@ addColumn("projects", "auto_deploy", "INTEGER NOT NULL DEFAULT 1");
 addColumn("projects", "last_seen_sha", "TEXT");
 addColumn("deployments", "ref", "TEXT");
 addColumn("projects", "guest_id", "TEXT");
+addColumn("projects", "source_type", "TEXT NOT NULL DEFAULT 'github'");
+addColumn("projects", "upload_ref", "TEXT");
+addColumn("projects", "trusted", "INTEGER NOT NULL DEFAULT 0");
+addColumn("deployments", "port", "INTEGER");
+addColumn("deployments", "scan", "TEXT");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS access_requests (
@@ -114,8 +119,8 @@ export const encryptForBuild = (env, deploymentId) => {
   return [iv, cipher.getAuthTag(), data].map((part) => part.toString("base64")).join(".");
 };
 
-const projectColumns = ["guest_id", "slug", "repo", "branch", "root_dir", "port", "memory_mb", "cpus", "env_enc", "build_env_enc", "auto_deploy", "last_seen_sha", "status", "live_deployment_id"];
-const deploymentColumns = ["status", "source_deployment_id", "run_id", "run_url", "steps", "commit_sha", "ref", "image", "container_name", "error", "finished_at"];
+const projectColumns = ["guest_id", "source_type", "upload_ref", "trusted", "slug", "repo", "branch", "root_dir", "port", "memory_mb", "cpus", "env_enc", "build_env_enc", "auto_deploy", "last_seen_sha", "status", "live_deployment_id"];
+const deploymentColumns = ["port", "scan", "status", "source_deployment_id", "run_id", "run_url", "steps", "commit_sha", "ref", "image", "container_name", "error", "finished_at"];
 
 const updater = (table, allowed) => (id, fields) => {
   const keys = Object.keys(fields).filter((field) => allowed.includes(field));
@@ -132,9 +137,9 @@ export const projects = {
   bySlug: (slug) => db.prepare("SELECT * FROM projects WHERE slug = ?").get(slug),
   insert: (project) => {
     const stamp = now();
-    db.prepare(`INSERT INTO projects (id, guest_id, slug, repo, branch, root_dir, port, memory_mb, cpus, env_enc, build_env_enc, auto_deploy, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`)
-      .run(project.id, project.guest_id ?? null, project.slug, project.repo, project.branch, project.root_dir, project.port, project.memory_mb, project.cpus, project.env_enc, project.build_env_enc, project.auto_deploy, stamp, stamp);
+    db.prepare(`INSERT INTO projects (id, guest_id, source_type, upload_ref, slug, repo, branch, root_dir, port, memory_mb, cpus, env_enc, build_env_enc, auto_deploy, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`)
+      .run(project.id, project.guest_id ?? null, project.source_type || "github", project.upload_ref ?? null, project.slug, project.repo, project.branch, project.root_dir, project.port, project.memory_mb, project.cpus, project.env_enc, project.build_env_enc, project.auto_deploy, stamp, stamp);
   },
   update: updater("projects", projectColumns),
   remove: (id) => db.prepare("DELETE FROM projects WHERE id = ?").run(id),
@@ -146,10 +151,11 @@ export const deployments = {
   forProject: (projectId, limit = 15) => db.prepare("SELECT * FROM deployments WHERE project_id = ? ORDER BY created_at DESC LIMIT ?").all(projectId, limit),
   withImages: (projectId) => db.prepare("SELECT * FROM deployments WHERE project_id = ? AND image IS NOT NULL ORDER BY created_at DESC").all(projectId),
   active: () => db.prepare("SELECT * FROM deployments WHERE status IN ('queued', 'building', 'deploying')").all(),
-  queuedPush: (projectId) => db.prepare("SELECT * FROM deployments WHERE project_id = ? AND status = 'queued' AND trigger = 'push'").all(projectId),
+  queuedPush: (projectId) => db.prepare("SELECT * FROM deployments WHERE project_id = ? AND status IN ('queued', 'awaiting_approval') AND trigger = 'push'").all(projectId),
+  awaiting: () => db.prepare("SELECT * FROM deployments WHERE status = 'awaiting_approval' ORDER BY created_at").all(),
   insert: (deployment) => {
-    db.prepare("INSERT INTO deployments (id, project_id, trigger, status, source_deployment_id, image, commit_sha, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)")
-      .run(deployment.id, deployment.project_id, deployment.trigger, deployment.source_deployment_id ?? null, deployment.image ?? null, deployment.commit_sha ?? null, now());
+    db.prepare("INSERT INTO deployments (id, project_id, trigger, status, source_deployment_id, image, commit_sha, port, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(deployment.id, deployment.project_id, deployment.trigger, deployment.status || "queued", deployment.source_deployment_id ?? null, deployment.image ?? null, deployment.commit_sha ?? null, deployment.port ?? null, now());
   },
   update: updater("deployments", deploymentColumns),
   appendLog: (id, line) => {

@@ -1,7 +1,7 @@
 import { config, engineReady } from "./config.mjs";
 import { decryptEnv, deployments, encryptEnv, encryptForBuild, guests, newId, now, projects } from "./db.mjs";
 import { DockerError, demuxLogs, docker } from "./docker.mjs";
-import { cancelRun, dispatchBuild, getRun, getRunSteps, headCommit, isPublicRepo } from "./github.mjs";
+import { cancelRun, deleteUpload, dispatchBuild, getRun, getRunSteps, headCommit, isPublicRepo } from "./github.mjs";
 import { pushRoutes } from "./router.mjs";
 
 const MANAGED_LABEL = "arch.platform.managed";
@@ -79,6 +79,8 @@ const publicDeployment = (deployment, { withLog = false } = {}) => ({
   steps: deployment.steps ? JSON.parse(deployment.steps) : [],
   commit: deployment.commit_sha,
   ref: deployment.ref,
+  port: deployment.port,
+  scan: deployment.scan,
   hasImage: Boolean(deployment.image),
   error: deployment.error,
   createdAt: deployment.created_at,
@@ -102,6 +104,8 @@ export const describeProject = (project, { withHistory = true } = {}) => {
     buildEnvKeys: keysOf(project.build_env_enc),
     autoDeploy: Boolean(project.auto_deploy),
     lastSeenCommit: project.last_seen_sha,
+    sourceType: project.source_type || "github",
+    trusted: Boolean(project.trusted),
     guestEmail: project.guest_id ? guests.get(project.guest_id)?.email || "unknown" : null,
     status: project.status,
     liveDeploymentId: project.live_deployment_id,
@@ -121,7 +125,7 @@ const liveRoutes = () => projects.all()
   .filter((project) => project.status === "active" && project.live_deployment_id)
   .map((project) => {
     const deployment = deployments.get(project.live_deployment_id);
-    return deployment?.container_name ? { host: hostFor(project.slug), dial: `${deployment.container_name}:${project.port}` } : null;
+    return deployment?.container_name ? { host: hostFor(project.slug), dial: `${deployment.container_name}:${deployment.port || project.port || 3000}` } : null;
   })
   .filter(Boolean);
 
@@ -148,28 +152,34 @@ const removeManaged = async (name) => {
   }
 };
 
-const waitHealthy = async (deploymentId, name, port) => {
+// Port 0 means "detect": try the PORT the app was given, the image's EXPOSE ports, then common
+// framework defaults. The first port that answers HTTP becomes the route target.
+const COMMON_PORTS = [3000, 8080, 80, 8000, 5000, 4321, 5173, 4000, 8888];
+const waitHealthy = async (deploymentId, name, candidates) => {
   const deadline = Date.now() + HEALTH_TIMEOUT_MS;
   let lastProblem = "no response yet";
+  const ports = [...new Set(candidates)];
   while (Date.now() < deadline) {
     const detail = await docker.inspect(name);
     if (detail.State?.Status === "exited" || detail.State?.Status === "dead") {
       const tail = demuxLogs(await docker.logs(name, 40)).trim();
       throw new Error(`Container exited with code ${detail.State.ExitCode}${tail ? `\n${tail}` : ""}`);
     }
-    try {
-      const response = await fetch(`http://${name}:${port}/`, { redirect: "manual", signal: AbortSignal.timeout(3000) });
-      if (response.status < 500) {
-        log(deploymentId, `Health check passed: HTTP ${response.status} on port ${port}`);
-        return;
+    for (const port of ports) {
+      try {
+        const response = await fetch(`http://${name}:${port}/`, { redirect: "manual", signal: AbortSignal.timeout(2500) });
+        if (response.status < 500) {
+          log(deploymentId, `Health check passed: HTTP ${response.status} on port ${port}`);
+          return port;
+        }
+        lastProblem = `HTTP ${response.status} on port ${port}`;
+      } catch (error) {
+        if (ports.length === 1) lastProblem = error.cause?.code || error.name;
       }
-      lastProblem = `HTTP ${response.status}`;
-    } catch (error) {
-      lastProblem = error.cause?.code || error.name;
     }
     await sleep(2000);
   }
-  throw new Error(`Health check timed out after ${HEALTH_TIMEOUT_MS / 1000}s (${lastProblem}). Is the app listening on port ${port}?`);
+  throw new Error(`Health check timed out after ${HEALTH_TIMEOUT_MS / 1000}s (${lastProblem}). Is the app listening on ${ports.length === 1 ? `port ${ports[0]}` : "an HTTP port"}?`);
 };
 
 const pruneImages = async (project) => {
@@ -200,7 +210,10 @@ const release = async (projectId, deploymentId) => {
   deployments.update(deploymentId, { status: "deploying", container_name: name });
   log(deploymentId, `Starting ${name} with ${project.memory_mb} MiB and ${project.cpus} CPU`);
 
-  const env = { ...decryptEnv(project.env_enc), PORT: String(project.port) };
+  const env = { ...decryptEnv(project.env_enc), PORT: String(project.port || 3000) };
+  const imageDetail = await docker.inspectImage(deployment.image).catch(() => null);
+  const exposed = Object.keys(imageDetail?.Config?.ExposedPorts || {}).map((key) => Number.parseInt(key, 10)).filter(Boolean);
+  const candidates = project.port ? [project.port] : [3000, ...exposed, ...COMMON_PORTS];
   await removeManaged(name);
   await docker.create(name, {
     Image: deployment.image,
@@ -222,8 +235,9 @@ const release = async (projectId, deploymentId) => {
 
   try {
     await docker.start(name);
-    await waitHealthy(deploymentId, name, project.port);
-    await syncRouter([{ host: hostFor(project.slug), dial: `${name}:${project.port}` }]);
+    const port = await waitHealthy(deploymentId, name, candidates);
+    deployments.update(deploymentId, { port });
+    await syncRouter([{ host: hostFor(project.slug), dial: `${name}:${port}` }]);
     log(deploymentId, `Routed ${hostFor(project.slug)} to ${name}`);
   } catch (error) {
     await removeManaged(name).catch(() => {});
@@ -243,7 +257,14 @@ const release = async (projectId, deploymentId) => {
   log(deploymentId, "Deployment is live");
 };
 
+class BlockedError extends Error {}
+
 const fail = (deploymentId, error) => {
+  if (error instanceof BlockedError) {
+    deployments.update(deploymentId, { status: "blocked", scan: "threat", error: error.message, finished_at: now() });
+    log(deploymentId, `Blocked: ${error.message}`);
+    return;
+  }
   deployments.update(deploymentId, { status: "failed", error: error.message.split("\n")[0].slice(0, 300), finished_at: now() });
   log(deploymentId, `Failed: ${error.message}`);
 };
@@ -257,7 +278,16 @@ const build = async (projectId, deploymentId) => {
   deployments.update(deploymentId, { status: "building" });
   log(deploymentId, `Building ${project.repo}@${/^[a-f0-9]{40}$/.test(ref) ? ref.slice(0, 7) : ref}${project.root_dir ? ` (${project.root_dir})` : ""} in GitHub Actions${buildEnv ? ` with ${Object.keys(buildVars).length} build variable(s)` : ""}`);
 
-  const { runId, runUrl } = await dispatchBuild({ deploymentId, repo: project.repo, ref, rootDir: project.root_dir, image, buildEnv });
+  const isUpload = project.source_type === "upload";
+  const { runId, runUrl } = await dispatchBuild({
+    deploymentId,
+    repo: isUpload ? config.github.builderRepo : project.repo,
+    ref: isUpload ? project.upload_ref : ref,
+    rootDir: project.root_dir,
+    image,
+    buildEnv,
+    sourceUpload: isUpload ? project.upload_ref : "",
+  });
   deployments.update(deploymentId, { run_id: runId, run_url: runUrl });
   log(deploymentId, `Build run ${runId} started`);
 
@@ -277,12 +307,33 @@ const build = async (projectId, deploymentId) => {
     await cancelRun(runId);
     throw new Error("Build timed out");
   }
-  if (run.conclusion !== "success") throw new Error(`Build ${run.conclusion}. Open the build run for details.`);
+  const steps = deployments.get(deploymentId).steps ? JSON.parse(deployments.get(deploymentId).steps) : [];
+  const scanSteps = steps.filter((step) => step.name.startsWith("Scan "));
+  if (run.conclusion !== "success") {
+    if (scanSteps.some((step) => step.conclusion === "failure")) throw new BlockedError("Malware scan blocked this build. Open the build run for the scanner report.");
+    throw new Error(`Build ${run.conclusion}. Open the build run for details.`);
+  }
+  if (scanSteps.length) {
+    deployments.update(deploymentId, { scan: "clean" });
+    log(deploymentId, "Malware scan: no threats found");
+  }
 
   const imageDetail = await docker.inspectImage(image).catch(() => null);
   if (!imageDetail) throw new Error("Build finished but the image did not reach the server");
   deployments.update(deploymentId, { image, commit_sha: imageDetail.Config?.Labels?.["arch.platform.commit"] || null });
   log(deploymentId, `Image received (${Math.round(imageDetail.Size / 1024 / 1024)} MiB)`);
+};
+
+// ---------- uploads ----------
+
+// An upload may be used once, only by whoever uploaded it, within an hour.
+const uploads = new Map();
+export const registerUpload = (ref, guest) => uploads.set(ref, { guestId: guest?.id ?? null, at: Date.now() });
+const claimUpload = (ref, guest) => {
+  const entry = uploads.get(ref);
+  if (!entry || entry.guestId !== (guest?.id ?? null) || Date.now() - entry.at > 60 * 60 * 1000) throw new InputError("Upload not found or expired. Upload the archive again.");
+  uploads.delete(ref);
+  return ref;
 };
 
 // ---------- public operations ----------
@@ -291,15 +342,9 @@ const requireEngine = () => {
   if (!engineReady()) throw new InputError("Deploy engine is not configured on the server");
 };
 
-const startDeployment = (projectId, trigger, { sourceDeploymentId, needsBuild, ref }) => {
-  const project = projects.get(projectId);
-  if (!project) throw new InputError("Project not found");
-  const source = sourceDeploymentId ? deployments.get(sourceDeploymentId) : null;
-  const id = newId();
-  deployments.insert({ id, project_id: projectId, trigger, source_deployment_id: sourceDeploymentId, image: source?.image, commit_sha: source?.commit_sha });
-  if (ref) deployments.update(id, { ref });
+const enqueue = (projectId, id, { needsBuild, sourceDeploymentId }) => {
   exclusive(projectId, async () => {
-    if (deployments.get(id).status === "cancelled") return;
+    if (deployments.get(id).status !== "queued") return;
     try {
       if (needsBuild) await build(projectId, id);
       else log(id, `Reusing image from deployment ${sourceDeploymentId.slice(0, 8)}`);
@@ -308,11 +353,44 @@ const startDeployment = (projectId, trigger, { sourceDeploymentId, needsBuild, r
       if (deployments.get(id).status !== "cancelled") fail(id, error);
     }
   });
+};
+
+// New code from an untrusted guest project waits for the owner. Restarts and rollbacks reuse an
+// image the owner already approved, so they do not.
+const startDeployment = (projectId, trigger, { sourceDeploymentId, needsBuild, ref }) => {
+  const project = projects.get(projectId);
+  if (!project) throw new InputError("Project not found");
+  const source = sourceDeploymentId ? deployments.get(sourceDeploymentId) : null;
+  const id = newId();
+  const gated = needsBuild && project.guest_id && !project.trusted;
+  deployments.insert({ id, project_id: projectId, trigger, status: gated ? "awaiting_approval" : "queued", source_deployment_id: sourceDeploymentId, image: source?.image, commit_sha: source?.commit_sha });
+  if (ref) deployments.update(id, { ref });
+  if (gated) {
+    log(id, "Waiting for the owner to approve this guest deploy");
+    return id;
+  }
+  enqueue(projectId, id, { needsBuild, sourceDeploymentId });
   return id;
+};
+
+export const approveDeployment = (deploymentId) => {
+  const deployment = deployments.get(deploymentId);
+  if (!deployment || deployment.status !== "awaiting_approval") throw new InputError("Nothing to approve for that deployment");
+  deployments.update(deploymentId, { status: "queued" });
+  log(deploymentId, "Approved by owner");
+  enqueue(deployment.project_id, deploymentId, { needsBuild: true });
+};
+
+export const denyDeployment = (deploymentId) => {
+  const deployment = deployments.get(deploymentId);
+  if (!deployment || deployment.status !== "awaiting_approval") throw new InputError("Nothing to deny for that deployment");
+  deployments.update(deploymentId, { status: "denied", finished_at: now() });
+  log(deploymentId, "Denied by owner");
 };
 
 // Builds deploy an exact commit, so a push during the build cannot change what ships.
 const resolveHead = async (project) => {
+  if (project.source_type === "upload") return project.upload_ref;
   try {
     const sha = await headCommit(project.repo, project.branch);
     projects.update(project.id, { last_seen_sha: sha });
@@ -341,10 +419,12 @@ export const createProject = async (input, { guest = null } = {}) => {
   const project = {
     id: newId(),
     slug,
-    repo: checkPath(String(input.repo || "").trim(), REPO, "repository (use owner/name)"),
+    source_type: input.source === "upload" ? "upload" : "github",
+    upload_ref: null,
+    repo: input.source === "upload" ? "upload" : checkPath(String(input.repo || "").trim(), REPO, "repository (use owner/name)"),
     branch: checkPath(String(input.branch || "main").trim(), BRANCH, "branch"),
     root_dir: checkPath(String(input.rootDir || "").trim().replace(/\/+$/, ""), ROOT, "root directory"),
-    port: numberIn(input.port ?? 3000, 1, 65535, "Port"),
+    port: input.port === undefined || input.port === null || input.port === "" || Number(input.port) === 0 ? 0 : numberIn(input.port, 1, 65535, "Port"),
     memory_mb: memoryMb,
     cpus,
     guest_id: guest?.id ?? null,
@@ -353,7 +433,10 @@ export const createProject = async (input, { guest = null } = {}) => {
     auto_deploy: input.autoDeploy === false ? 0 : 1,
   };
   requireBuildKey(project.build_env_enc);
-  if (guest && !(await isPublicRepo(project.repo))) throw new InputError("Guests can deploy public GitHub repositories only");
+  if (project.source_type === "upload") {
+    project.upload_ref = claimUpload(input.uploadRef, guest);
+    project.auto_deploy = 0;
+  } else if (guest && !(await isPublicRepo(project.repo))) throw new InputError("Guests can deploy public GitHub repositories only");
   projects.insert(project);
   const ref = await resolveHead(projects.get(project.id));
   const deploymentId = startDeployment(project.id, "create", { needsBuild: true, ref });
@@ -376,7 +459,13 @@ export const updateProject = (id, input, { guest = null } = {}) => {
   // A branch change takes effect on the next deploy, not as a surprise automatic one.
   if (fields.branch && fields.branch !== project.branch) fields.last_seen_sha = null;
   if (input.rootDir !== undefined) fields.root_dir = checkPath(String(input.rootDir).trim().replace(/\/+$/, ""), ROOT, "root directory");
-  if (input.port !== undefined) fields.port = numberIn(input.port, 1, 65535, "Port");
+  if (input.port !== undefined) fields.port = Number(input.port) === 0 || input.port === "" ? 0 : numberIn(input.port, 1, 65535, "Port");
+  if (input.trusted !== undefined && !guest) fields.trusted = input.trusted ? 1 : 0;
+  if (input.uploadRef !== undefined) {
+    if (project.source_type !== "upload") throw new InputError("Only upload projects take new uploads");
+    fields.upload_ref = claimUpload(input.uploadRef, guest);
+    deleteUpload(project.upload_ref);
+  }
   if (input.cpus !== undefined) fields.cpus = numberIn(input.cpus, 0.1, maxCpus, "CPU");
   if (input.memoryMb !== undefined) {
     fields.memory_mb = numberIn(input.memoryMb, 64, maxMemory, "Memory");
@@ -404,7 +493,7 @@ export const rollbackProject = (id, deploymentId) => {
 
 export const cancelDeployment = (deploymentId) => {
   const deployment = deployments.get(deploymentId);
-  if (!deployment || !["queued", "building"].includes(deployment.status)) throw new InputError("Only queued or building deployments can be cancelled");
+  if (!deployment || !["queued", "building", "awaiting_approval"].includes(deployment.status)) throw new InputError("Only waiting, queued, or building deployments can be cancelled");
   deployments.update(deploymentId, { status: "cancelled", finished_at: now() });
   log(deploymentId, "Cancelled by owner");
   if (deployment.run_id) cancelRun(deployment.run_id);
@@ -442,6 +531,7 @@ export const deleteProject = (id) => exclusive(id, async () => {
   for (const deployment of deployments.withImages(id)) {
     try { await docker.removeImage(deployment.image); } catch { /* already removed */ }
   }
+  if (project.source_type === "upload") await deleteUpload(project.upload_ref);
   projects.remove(id);
 });
 
@@ -483,7 +573,7 @@ const pollErrors = new Map();
 const pollOnce = async () => {
   if (!engineReady() || Date.now() < pausedUntil) return;
   for (const project of projects.all()) {
-    if (project.status !== "active" || !project.auto_deploy) continue;
+    if (project.status !== "active" || !project.auto_deploy || project.source_type === "upload") continue;
     try {
       const sha = await headCommit(project.repo, project.branch);
       pollErrors.delete(project.id);

@@ -3,10 +3,11 @@ import { assertSafeAuthMode, authenticate, authenticateGuest, authMode, guestsEn
 import { config, engineReady } from "./config.mjs";
 import { deployments, projects } from "./db.mjs";
 import {
-  GUEST_LIMITS, InputError, cancelDeployment, createProject, deleteProject, deployProject, describeProject, getDeployment,
+  GUEST_LIMITS, InputError, approveDeployment, cancelDeployment, denyDeployment, registerUpload, createProject, deleteProject, deployProject, describeProject, getDeployment,
   projectLogs, reconcile, rollbackProject, startPolling, startProject, stopProject, updateProject,
 } from "./engine.mjs";
-import { publicRepos } from "./github.mjs";
+import { createHash, randomBytes } from "node:crypto";
+import { publicRepos, storeUpload } from "./github.mjs";
 import {
   approveRequest, createAccessRequest, guestSession, listAccess, publicOverview, redeemInvite, reissueInvite, rejectRequest, revokeGuest,
 } from "./guests.mjs";
@@ -15,6 +16,7 @@ import { inventory } from "./inventory.mjs";
 const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 4000);
 const MAX_BODY = 64 * 1024;
+const MAX_UPLOAD = 25 * 1024 * 1024;
 const ID = "([a-f0-9]{16})";
 
 assertSafeAuthMode(host);
@@ -47,13 +49,49 @@ const readJson = (request) => new Promise((resolve, reject) => {
   request.on("error", reject);
 });
 
+// Raw zip upload. Only the size and the zip signature are checked here; the archive is never
+// extracted on this machine. It is stored in the private builder repository and unpacked and
+// malware-scanned on a GitHub runner.
+const readUpload = (request) => new Promise((resolve, reject) => {
+  if (!(request.headers["content-type"] || "").startsWith("application/zip")) return reject(new InputError("Upload a .zip file"));
+  const declared = Number(request.headers["content-length"] || 0);
+  if (declared > MAX_UPLOAD) return reject(new InputError("Archives are limited to 25 MB"));
+  let size = 0;
+  const chunks = [];
+  request.on("data", (chunk) => {
+    size += chunk.length;
+    if (size <= MAX_UPLOAD) chunks.push(chunk);
+  });
+  request.on("end", () => {
+    if (size > MAX_UPLOAD) return reject(new InputError("Archives are limited to 25 MB"));
+    const data = Buffer.concat(chunks);
+    if (data.length < 22 || data[0] !== 0x50 || data[1] !== 0x4b || ![0x03, 0x05].includes(data[2])) return reject(new InputError("That file is not a zip archive"));
+    resolve(data);
+  });
+  request.on("error", reject);
+});
+
+const uploadCounts = new Map();
+const handleUpload = async (ctx, request) => {
+  const actor = ctx.guest ? `guest:${ctx.guest.id}` : "owner";
+  const today = new Date().toISOString().slice(0, 10);
+  const count = uploadCounts.get(`${actor}:${today}`) || 0;
+  if (ctx.guest && count >= 10) throw new InputError("Upload limit reached for today");
+  const data = await readUpload(request);
+  uploadCounts.set(`${actor}:${today}`, count + 1);
+  const ref = await storeUpload(randomBytes(8).toString("hex"), data);
+  registerUpload(ref, ctx.guest);
+  return { uploadRef: ref, sizeBytes: data.length, sha256: createHash("sha256").update(data).digest("hex") };
+};
+
 // State-changing requests must be same-origin JSON. Cloudflare's session cookie is SameSite=Lax,
 // and this check blocks any cross-site form or script that could otherwise ride on it.
-const sameOriginJson = (request) => {
+const sameOrigin = (request) => {
   const origin = request.headers.origin;
-  const allowed = authMode === "dev-insecure" ? /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || "") : origin === config.consoleOrigin;
-  return allowed && (request.headers["content-type"] || "").startsWith("application/json");
+  return authMode === "dev-insecure" ? /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || "") : origin === config.consoleOrigin;
 };
+const sameOriginJson = (request) => sameOrigin(request) && (request.headers["content-type"] || "").startsWith("application/json");
+const isUploadPath = (path) => path === "/api/platform/uploads" || path === "/api/guest/uploads";
 
 const ownerProject = (id) => {
   const record = projects.get(id);
@@ -105,6 +143,7 @@ const routes = [
   ["guest-session", "POST", "/api/guest/redeem", async (ctx) => redeemInvite(ctx.email, (await ctx.body()).code)],
   ["guest", "GET", "/api/guest/projects", (ctx) => ({ engine: engineReady(), appDomain: config.appDomain, limits: GUEST_LIMITS, projects: projects.forGuest(ctx.guest.id).map((item) => describeProject(item)) })],
   ["guest", "POST", "/api/guest/projects", async (ctx) => createProject(await ctx.body(), { guest: ctx.guest })],
+  ["guest", "POST", "/api/guest/uploads", (ctx) => handleUpload(ctx, ctx.request)],
   ["guest", "GET", `/api/guest/deployments/${ID}`, (ctx) => { guestDeployment(ctx, ctx.params[0]); return deploymentPayload(ctx.params[0]); }],
   ["guest", "POST", `/api/guest/deployments/${ID}/cancel`, (ctx) => { guestDeployment(ctx, ctx.params[0]); cancelDeployment(ctx.params[0]); return { cancelled: true }; }],
   ...projectRoutes("/api/guest", "guest", guestProject),
@@ -115,6 +154,9 @@ const routes = [
   ["owner", "GET", "/api/platform/repos", async () => ({ repos: await publicRepos() })],
   ["owner", "GET", "/api/platform/projects", () => ({ engine: engineReady(), appDomain: config.appDomain, projects: projects.all().map((item) => describeProject(item)) })],
   ["owner", "POST", "/api/platform/projects", async (ctx) => createProject(await ctx.body())],
+  ["owner", "POST", "/api/platform/uploads", (ctx) => handleUpload(ctx, ctx.request)],
+  ["owner", "POST", `/api/platform/deployments/${ID}/approve`, (ctx) => { approveDeployment(ctx.params[0]); return { approved: true }; }],
+  ["owner", "POST", `/api/platform/deployments/${ID}/deny`, (ctx) => { denyDeployment(ctx.params[0]); return { denied: true }; }],
   ["owner", "GET", `/api/platform/deployments/${ID}`, (ctx) => deploymentPayload(ctx.params[0])],
   ["owner", "POST", `/api/platform/deployments/${ID}/cancel`, (ctx) => { cancelDeployment(ctx.params[0]); return { cancelled: true }; }],
   ...projectRoutes("/api/platform", "owner", (ctx, id) => ownerProject(id)),
@@ -141,7 +183,7 @@ createServer(async (request, response) => {
   // Authenticate before routing so unknown or oddly encoded paths that slip past
   // Cloudflare's path matching still require a valid token for their area.
   const area = areaFor(path);
-  const ctx = { query: url.searchParams, body: () => readJson(request), clientAddress: String(request.headers["cf-connecting-ip"] || "") };
+  const ctx = { request, query: url.searchParams, body: () => readJson(request), clientAddress: String(request.headers["cf-connecting-ip"] || "") };
   if (area === "owner") {
     const auth = await authenticate(request);
     if (!auth.ok) return send(response, auth.status, { status: auth.code });
@@ -159,7 +201,7 @@ createServer(async (request, response) => {
   const route = matches.find(([, method]) => method === request.method);
   if (!route) return send(response, 405, { status: "method_not_allowed" });
   if (route[0] === "guest" && !ctx.guest) return send(response, 403, { status: "guest_not_active" });
-  if (request.method !== "GET" && !sameOriginJson(request)) return send(response, 403, { status: "cross_origin_rejected" });
+  if (request.method !== "GET" && !(isUploadPath(path) ? sameOrigin(request) : sameOriginJson(request))) return send(response, 403, { status: "cross_origin_rejected" });
 
   ctx.params = path.match(route[2]).slice(1);
   try {
