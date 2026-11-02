@@ -1,6 +1,7 @@
-# Private AI model server. Only Ollama runs here; chat interfaces such as Open WebUI run on your
-# own devices and connect over Tailscale. Ollama's API has no authentication, so it is published
-# only on the server's Tailscale address (AI_BIND_ADDRESS in the ignored ai/.env).
+# Private AI: Ollama runs the model and Open WebUI serves the chat page, both on this server and
+# reachable only on its Tailscale address (AI_BIND_ADDRESS in the ignored ai/.env), so any device
+# on the tailnet just opens http://<server>:3000 in a browser. Ollama's API has no authentication.
+# Open WebUI is switched on and off from the deploy console and turns itself off when idle.
 #
 #   cd ~/services/arch-server/ai && docker compose up -d
 #   docker exec ai-ollama ollama pull <model>
@@ -32,5 +33,48 @@ services:
           memory: 4G
           cpus: '3.0'
 
+  webui:
+    image: ghcr.io/open-webui/open-webui:v0.12.3-slim
+    container_name: ai-webui
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    ports:
+      - "${AI_BIND_ADDRESS:?set AI_BIND_ADDRESS}:3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in ai/.env}
+      - WEBUI_URL=http://puturdawaywaltuh:3000
+      - CORS_ALLOW_ORIGIN=http://puturdawaywaltuh:3000
+      - ENABLE_OPENAI_API=false
+      - ANONYMIZED_TELEMETRY=false
+      - DO_NOT_TRACK=true
+      - SCARF_NO_ANALYTICS=true
+      # Each of these would run the model again after every message; on this CPU that doubles waits.
+      - ENABLE_TITLE_GENERATION=false
+      - ENABLE_TAGS_GENERATION=false
+      - ENABLE_FOLLOW_UP_GENERATION=false
+      - ENABLE_AUTOCOMPLETE_GENERATION=false
+      - ENABLE_SEARCH_QUERY_GENERATION=false
+      - ENABLE_RETRIEVAL_QUERY_GENERATION=false
+      # Document search uses the installed model through Ollama instead of downloading another one.
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=qwen3.5:2b
+    volumes:
+      - webui-data:/app/backend/data
+    labels:
+      # The deploy console may start and stop only containers carrying this label.
+      - arch.platform.toggle=ai
+    security_opt:
+      - no-new-privileges:true
+    cpu_shares: 128
+    oom_score_adj: 900
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
 volumes:
   ollama-models:
+  webui-data:
