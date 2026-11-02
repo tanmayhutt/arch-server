@@ -1,0 +1,36 @@
+# Private AI model server. Only Ollama runs here; chat interfaces such as Open WebUI run on your
+# own devices and connect over Tailscale. Ollama's API has no authentication, so it is published
+# only on the server's Tailscale address (AI_BIND_ADDRESS in the ignored ai/.env).
+#
+#   cd ~/services/arch-server/ai && docker compose up -d
+#   docker exec ai-ollama ollama pull <model>
+name: ai
+
+services:
+  ollama:
+    image: ollama/ollama:0.40.7
+    container_name: ai-ollama
+    restart: unless-stopped
+    ports:
+      - "${AI_BIND_ADDRESS:?set AI_BIND_ADDRESS to the Tailscale IPv4 in ai/.env}:11434:11434"
+    environment:
+      # Unload the model two minutes after the last request, so idle use is only the server process.
+      - OLLAMA_KEEP_ALIVE=2m
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_NUM_PARALLEL=1
+    volumes:
+      - ollama-models:/root/.ollama
+    security_opt:
+      - no-new-privileges:true
+    # Lowest priority on the machine: under contention the website, console, and apps win, and if
+    # memory runs out this is the process the kernel and earlyoom stop first.
+    cpu_shares: 128
+    oom_score_adj: 1000
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '3.0'
+
+volumes:
+  ollama-models:
