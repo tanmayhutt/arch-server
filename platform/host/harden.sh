@@ -61,8 +61,9 @@ fi
 
 systemctl reload sshd
 echo "SSH: keys only from the LAN and tailnet; passwords only via the Cloudflare Access browser terminal."
-sshd -T -C user="$user",host=lan,addr=192.168.1.50 | grep -E '^passwordauthentication'
-sshd -T -C user="$user",host=tunnel,addr=172.19.0.3 | grep -E '^passwordauthentication'
+# Informational only: show the effective setting for a LAN client and for the tunnel network.
+echo "LAN client:    $(sshd -T -C "user=$user,host=lan,addr=192.168.1.50,laddr=127.0.0.1,lport=22" 2>/dev/null | grep -E '^passwordauthentication' || echo 'see sshd -T')"
+echo "Tunnel client: $(sshd -T -C "user=$user,host=tunnel,addr=172.19.0.3,laddr=127.0.0.1,lport=22" 2>/dev/null | grep -E '^passwordauthentication' || echo 'see sshd -T')"
 
 # Start anything that failed to bind at boot before this setting existed.
 docker start ai-ollama >/dev/null 2>&1 || true
