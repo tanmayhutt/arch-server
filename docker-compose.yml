@@ -141,7 +141,7 @@ services:
           cpus: '0.1'
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.10.2
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel run
