@@ -1,6 +1,6 @@
 # Private AI: Ollama runs the model and Open WebUI serves the chat page, both on this server and
-# reachable only on its Tailscale address (AI_BIND_ADDRESS in the ignored ai/.env), so any device
-# on the tailnet just opens http://<server>:3000 in a browser. Ollama's API has no authentication.
+# reachable only on its Tailscale address (AI_BIND_ADDRESS and AI_CHAT_URL in the ignored ai/.env),
+# so any device on the tailnet just opens the chat URL in a browser. Ollama's API has no authentication.
 # Open WebUI is switched on and off from the deploy console and turns itself off when idle.
 #
 #   cd ~/services/arch-server/ai && docker compose up -d
@@ -44,8 +44,8 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in ai/.env}
-      - WEBUI_URL=http://puturdawaywaltuh:3000
-      - CORS_ALLOW_ORIGIN=http://puturdawaywaltuh:3000
+      - WEBUI_URL=${AI_CHAT_URL:?set AI_CHAT_URL in ai/.env}
+      - CORS_ALLOW_ORIGIN=${AI_CHAT_URL}
       - ENABLE_OPENAI_API=false
       - ANONYMIZED_TELEMETRY=false
       - DO_NOT_TRACK=true

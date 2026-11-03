@@ -12,6 +12,7 @@ import {
   approveRequest, createAccessRequest, guestSession, listAccess, publicOverview, redeemInvite, reissueInvite, rejectRequest, revokeGuest,
 } from "./guests.mjs";
 import { inventory } from "./inventory.mjs";
+import { aiStatus, startAi, startAiIdleWatch, stopAi } from "./ai.mjs";
 
 const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 4000);
@@ -160,6 +161,9 @@ const routes = [
   ["owner", "GET", `/api/platform/deployments/${ID}`, (ctx) => deploymentPayload(ctx.params[0])],
   ["owner", "POST", `/api/platform/deployments/${ID}/cancel`, (ctx) => { cancelDeployment(ctx.params[0]); return { cancelled: true }; }],
   ...projectRoutes("/api/platform", "owner", (ctx, id) => ownerProject(id)),
+  ["owner", "GET", "/api/platform/ai", async () => ({ ai: await aiStatus() })],
+  ["owner", "POST", "/api/platform/ai/start", async () => { await startAi(); return { ai: await aiStatus() }; }],
+  ["owner", "POST", "/api/platform/ai/stop", async () => { await stopAi(); return { ai: await aiStatus() }; }],
   ["owner", "GET", "/api/platform/access", () => ({ guestsEnabled, ...listAccess() })],
   ["owner", "POST", `/api/platform/access/requests/${ID}/approve`, (ctx) => approveRequest(ctx.params[0])],
   ["owner", "POST", `/api/platform/access/requests/${ID}/reject`, (ctx) => { rejectRequest(ctx.params[0]); return { rejected: true }; }],
@@ -216,4 +220,5 @@ createServer(async (request, response) => {
 }).listen(port, host, () => {
   console.log(`platform listening on ${host}:${port} (auth: ${authMode}, guests: ${guestsEnabled ? "enabled" : "disabled"}, engine: ${engineReady() ? "ready" : "disabled"})`);
   if (engineReady()) reconcile().then(startPolling);
+  startAiIdleWatch();
 });

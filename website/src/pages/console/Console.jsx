@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Boxes, Cpu, Globe2, HardDrive, LockKeyhole, MemoryStick, Network, RefreshCw, Server, ShieldCheck } from "lucide-react";
 import AccessPanel from "./AccessPanel";
+import AiPanel from "./AiPanel";
 import Projects from "./Projects";
 import PublicConsole from "./PublicConsole";
 import "./console.css";
@@ -209,6 +210,8 @@ const OwnerConsole = () => {
             <Projects />
 
             <AccessPanel />
+
+            <AiPanel />
 
             <section className="console-panel" aria-labelledby="routes-title">
               <div className="console-panel-heading">
